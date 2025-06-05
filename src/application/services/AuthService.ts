@@ -1,6 +1,13 @@
 import { AuthRepository } from "../../infrastructure/repositories/AuthRepository";
 import { AppError } from "../../shared/errors/AppError";
-import { RegisterDto, UserResponseDto } from "../dtos/AuthDto";
+import {
+  AuthResponseDto,
+  LoginDto,
+  RegisterDto,
+  UserResponseDto,
+} from "../dtos/AuthDto";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 export class AuthService {
   private authRepository: AuthRepository;
@@ -17,11 +24,56 @@ export class AuthService {
 
     this.validateRegisterData(userData);
 
-    console.log("🔐 Senha ainda não criptografada:", userData.password);
+    const hashedPassword = await bcrypt.hash(userData.password, 12);
 
-    const user = await this.authRepository.create(userData);
+    const userToCreate = {
+      ...userData,
+      password: hashedPassword, // Armazenar a senha criptografada
+    };
+
+    const user = await this.authRepository.create(userToCreate);
 
     return this.toUserResponse(user);
+  }
+
+  async login(loginData: LoginDto): Promise<AuthResponseDto> {
+    if (!loginData.email || !loginData.password) {
+      throw new Error("Email and password are required");
+    }
+
+    // 2. Buscar usuário por email
+    const user = await this.authRepository.findByEmail(loginData.email);
+    if (!user) {
+      throw new Error("Invalid credentials"); // Não dizer se é email ou senha
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      loginData.password,
+      user.password
+    );
+    if (!isPasswordValid) {
+      throw new Error("Invalid credentials");
+    }
+
+    const token = this.generateToken(user.id, user.email);
+
+    return {
+      user: this.toUserResponse(user),
+      token,
+      expiresIn: "24h", // 24 hours in seconds
+    };
+  }
+
+  private generateToken(userId: number, email: string): string {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new AppError("JWT secret is not defined", 500);
+    }
+
+    const payload = { userId, email };
+    const token = jwt.sign(payload, secret, { expiresIn: "24h" });
+
+    return token;
   }
 
   // PRIVATE - Validar dados de registro

@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from "express";
-import { RegisterDto } from "../../application/dtos/AuthDto";
+import { LoginDto, RegisterDto } from "../../application/dtos/AuthDto";
 import { AuthService } from "../../application/services/AuthService";
 import { ApiResponse } from "../../shared/utils/response";
+import { AppError } from "../../shared/errors/AppError";
 
 export class AuthController {
   private authService: AuthService;
@@ -21,6 +22,26 @@ export class AuthController {
         .json(ApiResponse.success(user, "User created successfully!"));
     } catch (error) {
       throw new Error("Error creating user: " + error);
+    }
+  }
+
+  async login(req: Request, res: Response, next: NextFunction) {
+    try {
+      const loginData: LoginDto = req.body;
+
+      const result = await this.authService.login(loginData);
+
+      res.status(200).json(ApiResponse.success(result, "Login successful!"));
+    } catch (error) {
+      // 4. Tratar erros
+      if (error instanceof AppError) {
+        return res
+          .status(error.statusCode)
+          .json(ApiResponse.error(error.message, error.statusCode));
+      }
+
+      console.error("❌ Login error:", error);
+      res.status(500).json(ApiResponse.error("Internal server error", 500));
     }
   }
 }
