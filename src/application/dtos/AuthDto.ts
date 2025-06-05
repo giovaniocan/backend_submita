@@ -30,3 +30,9 @@ export interface AuthResponseDto {
   token: string; // JWT token
   expiresIn: string; // Ex: "24h"
 }
+
+// DTO para payload do JWT
+export interface JwtPayloadDto {
+  userId: number;
+  email: string;
+}

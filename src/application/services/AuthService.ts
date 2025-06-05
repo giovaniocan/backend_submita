@@ -1,16 +1,16 @@
-import { UserRepository } from "../../infrastructure/repositories/UserRepository";
+import { AuthRepository } from "../../infrastructure/repositories/AuthRepository";
 import { AppError } from "../../shared/errors/AppError";
 import { RegisterDto, UserResponseDto } from "../dtos/AuthDto";
 
-export class UserService {
-  private userRepository: UserRepository;
+export class AuthService {
+  private authRepository: AuthRepository;
 
   constructor() {
-    this.userRepository = new UserRepository();
+    this.authRepository = new AuthRepository();
   }
 
   async createUser(userData: RegisterDto): Promise<UserResponseDto> {
-    const existingUser = await this.userRepository.findByEmail(userData.email);
+    const existingUser = await this.authRepository.findByEmail(userData.email);
     if (existingUser) {
       throw new Error("User already exists with this email.");
     }
@@ -19,7 +19,7 @@ export class UserService {
 
     console.log("🔐 Senha ainda não criptografada:", userData.password);
 
-    const user = await this.userRepository.create(userData);
+    const user = await this.authRepository.create(userData);
 
     return this.toUserResponse(user);
   }
