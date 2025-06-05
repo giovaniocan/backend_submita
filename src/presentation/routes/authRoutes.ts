@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { AuthController } from "../controllers/AuthController";
+import { authenticate } from "../middlewares/authMiddleware";
 
 const router = Router();
 
@@ -14,6 +15,10 @@ router.post("/register", async (req, res, next) => {
 
 router.post("/login", async (req, res, next) => {
   await authController.login(req, res, next);
+});
+
+router.get("/profile", authenticate, async (req, res, next) => {
+  await authController.getProfile(req, res, next);
 });
 
 export { router as authRoutes };

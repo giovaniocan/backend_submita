@@ -15,6 +15,5 @@ app.use(express.urlencoded({ extended: true }));
 
 // Rotas principais
 app.use("/api", appRoutes);
-app.get("/hello", helloController.sayHello);
 
 export { app };
