@@ -18,28 +18,24 @@ router.get("/active", async (req, res, next) => {
   await eventController.getActiveEvents(req, res, next);
 });
 
-// ========================================
-// ROTAS PROTEGIDAS DE LEITURA (qualquer usuário autenticado)
-// ========================================
-
-// Listar eventos com filtros (qualquer usuário autenticado)
-router.get("/", authenticate, async (req, res, next) => {
+// Listar eventos com filtros (público)
+router.get("/", async (req, res, next) => {
   await eventController.getEvents(req, res, next);
 });
 
-// Buscar evento por ID (qualquer usuário autenticado)
-router.get("/:id", authenticate, async (req, res, next) => {
+// Buscar evento por ID (público)
+router.get("/:id", async (req, res, next) => {
   await eventController.getEventById(req, res, next);
-});
-
-// Estatísticas de eventos (qualquer usuário autenticado)
-router.get("/stats/overview", authenticate, async (req, res, next) => {
-  await eventController.getEventsStats(req, res, next);
 });
 
 // ========================================
 // ROTAS PROTEGIDAS PARA COORDENADORES (CREATE, UPDATE, DELETE)
 // ========================================
+
+// Estatísticas de eventos (apenas COORDINATOR)
+router.get("/stats/overview", authenticate, requireCoordinator(), async (req, res, next) => {
+  await eventController.getEventsStats(req, res, next);
+});
 
 // Criar evento (apenas COORDINATOR)
 router.post("/", authenticate, requireCoordinator(), async (req, res, next) => {
