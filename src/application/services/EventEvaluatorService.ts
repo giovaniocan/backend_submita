@@ -160,6 +160,39 @@ export class EventEvaluatorService {
     return this.toEventEvaluatorResponse(eventEvaluator);
   }
 
+  async removeEvaluatorFromEvent(
+    eventId: string,
+    userId: string
+  ): Promise<{ message: string; removedEvaluator: EventEvaluatorResponseDto }> {
+    // 1️⃣ VALIDAR IDs
+    if (!this.isValidUUID(eventId)) {
+      throw new AppError("Invalid event ID format", 400);
+    }
+
+    if (!this.isValidUUID(userId)) {
+      throw new AppError("Invalid user ID format", 400);
+    }
+
+    // 2️⃣ VERIFICAR SE O RELACIONAMENTO EXISTE
+    const exists = await this.eventEvaluatorRepository.findByEventAndUser(
+      eventId,
+      userId
+    );
+    if (!exists) {
+      throw new AppError("Evaluator is not assigned to this event", 404);
+    }
+
+    // 3️⃣ REMOVER O AVALIADOR DO EVENTO (SOFT DELETE)
+    const removedEvaluator =
+      await this.eventEvaluatorRepository.removeFromEvent(eventId, userId);
+
+    // 4️⃣ RETORNAR CONFIRMAÇÃO
+    return {
+      message: "Evaluator removed from event successfully",
+      removedEvaluator: this.toEventEvaluatorResponse(removedEvaluator),
+    };
+  }
+
   // PRIVATE METHODS
 
   private isValidUUID(uuid: string): boolean {

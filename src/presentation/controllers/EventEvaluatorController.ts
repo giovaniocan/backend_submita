@@ -115,6 +115,33 @@ export class EventEvaluatorController {
     }
   }
 
+  async removeEvaluatorFromEvent(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      // Pegar IDs da URL: /events/:eventId/evaluators/:userId
+      const { eventId, userId } = req.params;
+
+      const result = await this.eventEvaluatorService.removeEvaluatorFromEvent(
+        eventId,
+        userId
+      );
+
+      res
+        .status(200)
+        .json(
+          ApiResponse.success(
+            result,
+            "Evaluator removed from event successfully!"
+          )
+        );
+    } catch (error) {
+      this.handleError(error, res, "Remove evaluator from event error");
+    }
+  }
+
   private handleError(error: unknown, res: Response, context: string): void {
     if (error instanceof AppError) {
       res

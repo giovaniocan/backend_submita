@@ -113,16 +113,14 @@ router.get(
   }
 );
 
-/*
-
 // Remover avaliador do evento
-router.delete("/:eventId/evaluators/:userId", 
-  authenticate, 
+router.delete(
+  "/:eventId/evaluators/:userId",
+  authenticate,
   requireCoordinator(),
   async (req, res, next) => {
     await eventEvaluatorController.removeEvaluatorFromEvent(req, res, next);
   }
 );
-*/
 
 export { router as eventRoutes };

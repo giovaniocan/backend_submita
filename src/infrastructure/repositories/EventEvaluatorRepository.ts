@@ -142,6 +142,41 @@ export class EventEvaluatorRepository {
     });
   }
 
+  async removeFromEvent(
+    eventId: string,
+    userId: string
+  ): Promise<EventEvaluator> {
+    return await prisma.eventEvaluator.update({
+      where: {
+        eventId_userId: {
+          eventId,
+          userId,
+        },
+      },
+      data: {
+        isActive: false, // ✅ SOFT DELETE - marca como inativo
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            isActive: true,
+          },
+        },
+        event: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+          },
+        },
+      },
+    });
+  }
+
   async isValidEvaluator(userId: string): Promise<boolean> {
     // Verifica se o usuário é um avaliador ativo
     const user = await prisma.user.findUnique({
