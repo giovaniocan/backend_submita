@@ -33,9 +33,14 @@ router.get("/:id", async (req, res, next) => {
 // ========================================
 
 // Estatísticas de eventos (apenas COORDINATOR)
-router.get("/stats/overview", authenticate, requireCoordinator(), async (req, res, next) => {
-  await eventController.getEventsStats(req, res, next);
-});
+router.get(
+  "/status/overview",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await eventController.getEventsStats(req, res, next);
+  }
+);
 
 // Criar evento (apenas COORDINATOR)
 router.post("/", authenticate, requireCoordinator(), async (req, res, next) => {
@@ -43,18 +48,33 @@ router.post("/", authenticate, requireCoordinator(), async (req, res, next) => {
 });
 
 // Atualizar evento (apenas COORDINATOR)
-router.put("/:id", authenticate, requireCoordinator(), async (req, res, next) => {
-  await eventController.updateEvent(req, res, next);
-});
+router.put(
+  "/:id",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await eventController.updateEvent(req, res, next);
+  }
+);
 
 // Soft delete - desativar evento (apenas COORDINATOR)
-router.patch("/:id/deactivate", authenticate, requireCoordinator(), async (req, res, next) => {
-  await eventController.softDeleteEvent(req, res, next);
-});
+router.patch(
+  "/:id/deactivate",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await eventController.softDeleteEvent(req, res, next);
+  }
+);
 
 // Hard delete - excluir permanentemente (apenas COORDINATOR)
-router.delete("/:id", authenticate, requireCoordinator(), async (req, res, next) => {
-  await eventController.hardDeleteEvent(req, res, next);
-});
+router.delete(
+  "/:id",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await eventController.hardDeleteEvent(req, res, next);
+  }
+);
 
 export { router as eventRoutes };
