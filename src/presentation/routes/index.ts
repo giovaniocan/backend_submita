@@ -1,6 +1,8 @@
 // src/presentation/routes/index.ts
 import { Router } from "express";
 import { authRoutes } from "./authRoutes";
+import { eventRoutes } from "./eventRoutes";
+import { userRoutes } from "./userRoutes";
 
 const router = Router();
 
@@ -12,9 +14,10 @@ router.use("/auth", authRoutes);
 // ✅ DESCOMENTE CONFORME FOR CRIANDO
 // ========================================
 
-// Rotas de eventos  
-import { eventRoutes } from "./eventRoutes";
+// Rotas de eventos
 router.use("/events", eventRoutes);
+
+router.use("/users", userRoutes);
 
 /*
 // Rotas de usuários (CRUD completo)
