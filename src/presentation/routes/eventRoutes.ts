@@ -103,16 +103,17 @@ router.get(
   }
 );
 
-/*
-
 // Buscar avaliador específico no evento
-router.get("/evaluators/:id", 
-  authenticate, 
+router.get(
+  "/:eventId/evaluators/:id",
+  authenticate,
   requireStaff(),
   async (req, res, next) => {
     await eventEvaluatorController.getEventOneEvaluator(req, res, next);
   }
 );
+
+/*
 
 // Remover avaliador do evento
 router.delete("/:eventId/evaluators/:userId", 

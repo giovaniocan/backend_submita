@@ -93,6 +93,28 @@ export class EventEvaluatorController {
     }
   }
 
+  async getEventOneEvaluator(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      // Pegar o ID do EventEvaluator da URL
+      const { id } = req.params; // De /events/evaluators/:id
+      console.log(`Fetching evaluator with ID: ${id}`);
+
+      const result = await this.eventEvaluatorService.getEventEvaluator(id);
+
+      res
+        .status(200)
+        .json(
+          ApiResponse.success(result, "Event evaluator retrieved successfully!")
+        );
+    } catch (error) {
+      this.handleError(error, res, "Get event evaluator error");
+    }
+  }
+
   private handleError(error: unknown, res: Response, context: string): void {
     if (error instanceof AppError) {
       res

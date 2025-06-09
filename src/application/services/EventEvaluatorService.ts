@@ -143,6 +143,23 @@ export class EventEvaluatorService {
     };
   }
 
+  async getEventEvaluator(id: string): Promise<EventEvaluatorResponseDto> {
+    if (!this.isValidUUID(id)) {
+      throw new AppError("Invalid evaluator ID format", 400);
+    }
+
+    // 2️⃣ BUSCAR NO REPOSITORY
+    const eventEvaluator = await this.eventEvaluatorRepository.findById(id);
+
+    // 3️⃣ VERIFICAR SE EXISTE
+    if (!eventEvaluator) {
+      throw new AppError("Event evaluator not found", 404);
+    }
+
+    // 4️⃣ RETORNAR RESPOSTA FORMATADA
+    return this.toEventEvaluatorResponse(eventEvaluator);
+  }
+
   // PRIVATE METHODS
 
   private isValidUUID(uuid: string): boolean {

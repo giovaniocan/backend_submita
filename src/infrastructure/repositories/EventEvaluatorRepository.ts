@@ -83,9 +83,6 @@ export class EventEvaluatorRepository {
       where.isActive = isActive; // Filtra por avaliadores ativos ou inativos
     }
 
-    console.log("FILTROS DE PAGINAÇÃO:", filters);
-    console.log("FILTRO DE BUSCA:", where);
-
     const [evaluators, total] = await Promise.all([
       prisma.eventEvaluator.findMany({
         where,
@@ -118,9 +115,31 @@ export class EventEvaluatorRepository {
       }),
     ]);
 
-    console.log("AVALIADORES ENCONTRADOS:", evaluators);
-
     return { evaluators, total };
+  }
+
+  async findById(id: string): Promise<EventEvaluator | null> {
+    return await prisma.eventEvaluator.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            isActive: true,
+          },
+        },
+        event: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+          },
+        },
+      },
+    });
   }
 
   async isValidEvaluator(userId: string): Promise<boolean> {
