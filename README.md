@@ -1,70 +1,42 @@
-# 🔐 SUBMITA API - Sistema de Autenticação
+# 🎓 SUBMITA API
 
-API de autenticação com Node.js, TypeScript e JWT com controle de roles.
+API para gerenciamento de eventos científicos com Node.js + TypeScript + PostgreSQL.
 
-## 🛠️ Tecnologias
-
-- **Node.js** + **TypeScript** + **Express**
-- **Prisma** + **PostgreSQL**
-- **JWT** + **Bcrypt**
-
-## 🚀 Como Executar
-
-### 1. Instalar e configurar
+## 🚀 Setup Rápido
 
 ```bash
-git clone <url-do-repo>
+git clone <repo>
 cd submita-backend
 npm install
-```
-
-### 2. Configurar .env
-
-```env
-# Server
-PORT=8080
-NODE_ENV=development
-
-# Database
-DATABASE_URL="postgresql://root:root@localhost:5433/submita_db?schema=public"
-
-# JWT - NOVAS VARIÁVEIS
-JWT_SECRET="seu-jwt-aqui"
-JWT_EXPIRES_IN=24h
-```
-
-### 3. Rodar banco e migrations
-
-```bash
+cp .env.example .env
 docker-compose up -d
-npm prisma:generate-all
-npm run dev:old
+npm run prisma:generate-all
+npm run dev
 ```
 
-Servidor: `http://localhost:8080` 🎉
+**URL:** `http://localhost:8080`
 
-## 🔐 Sistema de Roles
-
-- **STUDENT** - Alunos/Autores (padrão)
-- **EVALUATOR** - Avaliadores
-- **COORDINATOR** - Coordenadores
+## 🔐 Roles
+- **STUDENT**: Autores (padrão)
+- **EVALUATOR**: Avaliadores  
+- **COORDINATOR**: Coordenadores
 
 ## 📋 Endpoints
 
-### **Registro (Público)**
+### Auth (`/api/auth`)
 
+**Registro:**
 ```http
 POST /api/auth/register
 {
-  "name": "João Silva",
-  "email": "joao@email.com",
+  "name": "João",
+  "email": "joao@email.com", 
   "password": "123456",
   "role": "STUDENT"
 }
 ```
 
-### **Login (Público)**
-
+**Login:**
 ```http
 POST /api/auth/login
 {
@@ -73,112 +45,138 @@ POST /api/auth/login
 }
 ```
 
-**Retorna:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "user": { "id": "...", "name": "João Silva", "role": "STUDENT" },
-    "token": "eyJhbGciOiJIUzI1NiIs...",
-    "expiresIn": "7d"
-  }
-}
-```
-
-### **Perfil (Protegido)**
-
+**Perfil:** 🔒
 ```http
 GET /api/auth/profile
-Authorization: Bearer SEU_TOKEN_AQUI
+Authorization: Bearer <token>
 ```
 
-## 🧪 Testando
-
-### Sequência de teste:
-
-```bash
-# 1. Registrar
-curl -X POST http://localhost:8080/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name":"João","email":"joao@email.com","password":"123456"}'
-
-# 2. Login
-curl -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"joao@email.com","password":"123456"}'
-
-# 3. Profile (usar token do login)
-curl -X GET http://localhost:8080/api/auth/profile \
-  -H "Authorization: Bearer SEU_TOKEN_AQUI"
-```
-
-### Usando REST Client (VS Code):
-
+**Criar Avaliador:** 🔒 COORDINATOR
 ```http
-### Registro
-POST http://localhost:8080/api/auth/register
-Content-Type: application/json
-
+POST /api/auth/register-evaluator
 {
-  "name": "João Silva",
-  "email": "joao@email.com",
+  "name": "Dr. Maria",
+  "email": "maria@email.com",
   "password": "123456"
 }
-
-### Login
-POST http://localhost:8080/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "joao@email.com",
-  "password": "123456"
-}
-
-### Profile
-GET http://localhost:8080/api/auth/profile
-Authorization: Bearer {{token_do_login}}
 ```
 
-## ⚠️ Validações
+### Eventos (`/api/events`)
 
-- **Nome**: mínimo 2 caracteres
-- **Email**: formato válido e único
-- **Senha**: mínimo 6 caracteres
-- **Token**: expira em 7 dias
+**Listar Eventos:** (Público)
+```http
+GET /api/events?page=1&limit=10&search=termo&status=SUBMISSIONS_OPEN
+```
 
-## ❌ Principais Erros
+**Buscar por ID:** (Público)
+```http
+GET /api/events/:id?includeStats=true
+```
 
-| Código | Erro            | Solução                       |
-| ------ | --------------- | ----------------------------- |
-| 400    | Dados inválidos | Verificar campos obrigatórios |
-| 401    | Token inválido  | Fazer login novamente         |
-| 409    | Email já existe | Usar outro email              |
-| 500    | Erro interno    | Verificar banco/logs          |
+**Criar:** 🔒 COORDINATOR
+```http
+POST /api/events
+{
+  "name": "Evento 2025",
+  "description": "Descrição",
+  "eventStartDate": "2025-07-01T08:00:00Z",
+  "eventEndDate": "2025-07-03T18:00:00Z", 
+  "submissionStartDate": "2025-06-01T00:00:00Z",
+  "submissionEndDate": "2025-06-30T23:59:59Z",
+  "evaluationType": "PAIR"
+}
+```
 
-## 🔧 Scripts
+**Atualizar:** 🔒 COORDINATOR
+```http
+PUT /api/events/:id
+{
+  "name": "Novo nome",
+  "status": "SUBMISSIONS_OPEN"
+}
+```
+
+**Desativar:** 🔒 COORDINATOR
+```http
+PATCH /api/events/:id/deactivate
+```
+
+**Deletar:** 🔒 COORDINATOR
+```http
+DELETE /api/events/:id
+```
+
+### Avaliadores de Eventos (`/api/events`)
+
+**Adicionar Avaliadores:** 🔒 COORDINATOR
+```http
+POST /api/events/:eventId/evaluators
+{
+  "userIds": ["uuid1", "uuid2"]
+}
+```
+
+**Listar Avaliadores do Evento:** 🔒 COORDINATOR
+```http
+GET /api/events/:eventId/evaluators?page=1&search=nome
+```
+
+**Remover Avaliador:** 🔒 COORDINATOR
+```http
+DELETE /api/events/:eventId/evaluators/:userId
+```
+
+### Usuários (`/api/users`)
+
+**Listar Todos Avaliadores:** 🔒 COORDINATOR
+```http
+GET /api/users/evaluators?page=1&limit=10&search=nome&isActive=true
+```
+
+## 📦 Scripts
 
 ```bash
-npm run dev      # Desenvolvimento
-npm run build    # Build produção
-npm start        # Rodar produção
+npm run dev          # Desenvolvimento
+npm run build        # Build
+npm start            # Produção
+npm run prisma:generate-all  # Gerar Prisma + Migrate
 ```
 
-## 🚨 Problemas Comuns
+## 🗄️ Banco de Dados
 
-**Erro "Expected String, provided Int"**
+```bash
+# Reset completo (apaga dados)
+npx prisma migrate reset
 
-- Problema: Token antigo com ID numérico
-- Solução: `npx prisma migrate reset` (apaga dados)
+# Nova migration
+npx prisma migrate dev --name nome_da_migration
 
-**"JWT secret not configured"**
+# Visualizar BD
+npx prisma studio
+```
 
-- Adicionar `JWT_SECRET` no .env
+## 🔧 Variáveis de Ambiente
 
-**"Database connection failed"**
+```env
+PORT=8080
+DATABASE_URL="postgresql://root:root@localhost:5433/submita_db"
+JWT_SECRET="seu-jwt-secret-aqui"
+JWT_EXPIRES_IN=7d
+```
 
-- Rodar `docker-compose up -d`
+## ⚠️ Status HTTP
 
----
+- **200**: Sucesso
+- **201**: Criado
+- **400**: Dados inválidos
+- **401**: Não autenticado
+- **403**: Sem permissão
+- **404**: Não encontrado
+- **409**: Conflito (email duplicado)
+- **500**: Erro interno
 
-Desenvolvido para o sistema SUBMITA 🚀
+## 🚨 Troubleshooting
+
+**Token inválido:** Refazer login  
+**Banco offline:** `docker-compose up -d`  
+**Migration error:** `npx prisma migrate reset`
