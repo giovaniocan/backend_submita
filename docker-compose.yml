@@ -3,11 +3,11 @@ version: "3.8"
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: postgres_container
+    container_name: submita_db
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
-      POSTGRES_DB: auth_db
+      POSTGRES_DB: submita_db
     ports:
       - "5433:5432"
     volumes:
