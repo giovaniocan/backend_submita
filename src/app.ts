@@ -1,10 +1,7 @@
 import express from "express";
-import { HelloController } from "./presentation/controllers/HelloControler";
 import helmet from "helmet";
 import cors from "cors";
 import { appRoutes } from "./presentation/routes";
-
-const helloController = new HelloController();
 
 const app = express();
 

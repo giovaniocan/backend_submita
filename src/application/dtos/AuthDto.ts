@@ -64,8 +64,3 @@ export interface JwtPayloadDto {
   email: string;
   role: "STUDENT" | "EVALUATOR" | "COORDINATOR"; // ✅ MUDANÇA: Role no token
 }
-
-// ✅ REMOVIDO: DTOs relacionados a múltiplas roles
-// - RoleResponseDto
-// - AssignRoleDto
-// - CreateUserWithRolesDto

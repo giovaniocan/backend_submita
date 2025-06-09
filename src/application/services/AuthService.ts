@@ -1,4 +1,3 @@
-// src/application/services/AuthService.ts
 import { AuthRepository } from "../../infrastructure/repositories/AuthRepository";
 import { AppError } from "../../shared/errors/AppError";
 import {
