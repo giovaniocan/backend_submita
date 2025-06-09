@@ -3,6 +3,8 @@ import { Router } from "express";
 import { authRoutes } from "./authRoutes";
 import { eventRoutes } from "./eventRoutes";
 import { userRoutes } from "./userRoutes";
+import { checklistRoutes } from "./checklistRoutes";
+import { authenticate } from "../middlewares/authMiddleware";
 
 const router = Router();
 
@@ -18,6 +20,8 @@ router.use("/auth", authRoutes);
 router.use("/events", eventRoutes);
 
 router.use("/users", userRoutes);
+
+router.use("/checklist", authenticate, checklistRoutes);
 
 /*
 // Rotas de usuários (CRUD completo)
