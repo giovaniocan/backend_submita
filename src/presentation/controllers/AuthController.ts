@@ -100,7 +100,7 @@ export class AuthController {
   // ========================================
   // CRIAR AVALIADOR (Apenas Coordenadores)
   // ========================================
-  async createEvaluator(
+  async registerEvaluator(
     req: Request,
     res: Response,
     next: NextFunction

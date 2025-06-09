@@ -38,13 +38,13 @@ router.get("/profile", authenticate, async (req, res, next) => {
   await authController.getProfile(req, res, next);
 });
 
-// Create Evaluator (apenas COORDENADORES)
+// Register Evaluator (apenas COORDENADORES)
 router.post(
   "/register-evaluator",
   authenticate,
   requireCoordinator(),
   async (req, res, next) => {
-    await authController.createEvaluator(req, res, next);
+    await authController.registerEvaluator(req, res, next);
   }
 );
 
