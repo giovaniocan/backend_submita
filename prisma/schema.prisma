@@ -64,14 +64,13 @@ model User {
   email       String   @unique @db.VarChar(100)
   password    String   @db.VarChar(300)
   name        String   @db.VarChar(100)
+  role        RoleType @default(STUDENT) // ✅ MUDANÇA: Role direta no usuário
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   isFromBpk   Boolean  @default(true) @map("is_from_bpk")
 
-
-  // Relacionamentos
-  userRoles            UserRole[]
+  // Relacionamentos - ✅ REMOVIDO: userRoles
   articles             Article[]
   evaluations          Evaluation[]
   eventEvaluators      EventEvaluator[]
@@ -80,38 +79,13 @@ model User {
 
   @@index([email])
   @@index([isActive])
+  @@index([role]) // ✅ ADICIONADO: Índice para role
   @@map("users")
 }
 
-model Role {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      RoleType @unique
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  // Relacionamentos
-  userRoles UserRole[]
-
-  @@map("roles")
-}
-
-model UserRole {
-  id     String @id @default(uuid()) @db.Uuid
-  userId String @map("user_id") @db.Uuid
-  roleId String @map("role_id") @db.Uuid
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  // Relacionamentos
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, roleId])
-  @@index([userId])
-  @@index([roleId])
-  @@map("user_roles")
-}
+// ========================================
+// ✅ REMOVIDO: Tabelas Role e UserRole completamente
+// ========================================
 
 // ========================================
 // EVENT MANAGEMENT

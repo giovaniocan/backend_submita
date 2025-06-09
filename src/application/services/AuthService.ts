@@ -1,13 +1,15 @@
+// src/application/services/AuthService.ts
 import { AuthRepository } from "../../infrastructure/repositories/AuthRepository";
 import { AppError } from "../../shared/errors/AppError";
 import {
-  AuthResponseDto,
+  CreateUserDto,
   LoginDto,
-  RegisterDto,
   UserResponseDto,
+  AuthResponseDto,
 } from "../dtos/AuthDto";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { User } from "../../generated/prisma";
 
 export class AuthService {
   private authRepository: AuthRepository;
@@ -16,86 +18,100 @@ export class AuthService {
     this.authRepository = new AuthRepository();
   }
 
-  async createUser(userData: RegisterDto): Promise<UserResponseDto> {
+  // ========================================
+  // REGISTRO
+  // ========================================
+  async createUser(userData: CreateUserDto): Promise<UserResponseDto> {
+    // Verificar se email já existe
     const existingUser = await this.authRepository.findByEmail(userData.email);
     if (existingUser) {
-      throw new Error("User already exists with this email.");
+      throw new AppError("Email already in use", 409);
     }
 
-    this.validateRegisterData(userData);
+    // Validar dados
+    this.validateCreateData(userData);
 
+    // Hash da senha
     const hashedPassword = await bcrypt.hash(userData.password, 12);
 
+    // Criar usuário com role padrão STUDENT
     const userToCreate = {
       ...userData,
-      password: hashedPassword, // Armazenar a senha criptografada
+      password: hashedPassword,
+      role: userData.role || ("STUDENT" as const),
     };
 
     const user = await this.authRepository.create(userToCreate);
-
     return this.toUserResponse(user);
   }
 
+  // ========================================
+  // LOGIN
+  // ========================================
   async login(loginData: LoginDto): Promise<AuthResponseDto> {
     if (!loginData.email || !loginData.password) {
-      throw new Error("Email and password are required");
+      throw new AppError("Email and password are required", 400);
     }
 
-    // 2. Buscar usuário por email
-    const user = await this.authRepository.findByEmail(loginData.email);
+    // Buscar usuário ativo por email
+    const user = await this.authRepository.findActiveByEmail(loginData.email);
     if (!user) {
-      throw new Error("Invalid credentials"); // Não dizer se é email ou senha
+      throw new AppError("Invalid credentials", 401);
     }
 
+    // Verificar senha
     const isPasswordValid = await bcrypt.compare(
       loginData.password,
       user.password
     );
     if (!isPasswordValid) {
-      throw new Error("Invalid credentials");
+      throw new AppError("Invalid credentials", 401);
     }
 
-    const token = this.generateToken(user.id, user.email);
+    // Gerar token
+    const token = this.generateToken(user.id, user.email, user.role);
 
     return {
       user: this.toUserResponse(user),
       token,
-      expiresIn: "24h", // 24 hours in seconds
+      expiresIn: "7d",
     };
   }
 
-  private generateToken(userId: number, email: string): string {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new AppError("JWT secret is not defined", 500);
+  // ========================================
+  // PERFIL
+  // ========================================
+  async getProfile(userId: string): Promise<UserResponseDto> {
+    const user = await this.authRepository.findActiveById(userId);
+    if (!user) {
+      throw new AppError("User not found", 404);
     }
 
-    const payload = { userId, email };
-    const token = jwt.sign(payload, secret, { expiresIn: "24h" });
-
-    return token;
+    return this.toUserResponse(user);
   }
 
-  // PRIVATE - Validar dados de registro
-  private validateRegisterData(userData: RegisterDto): void {
+  // ========================================
+  // MÉTODOS PRIVADOS
+  // ========================================
+  private validateCreateData(userData: CreateUserDto): void {
     if (!userData.name || userData.name.trim().length < 2) {
-      throw new AppError("The name has to have at least 2 caracters", 400);
+      throw new AppError("Name must have at least 2 characters", 400);
     }
 
     if (!userData.email || !this.isValidEmail(userData.email)) {
-      throw new AppError("Invalid Email", 400);
+      throw new AppError("Invalid email format", 400);
     }
 
     if (!userData.password || userData.password.length < 6) {
-      throw new AppError("Your password has to have at least 6 caracters", 400);
+      throw new AppError("Password must have at least 6 characters", 400);
     }
 
-    if (!userData.courseId || userData.courseId <= 0) {
-      throw new AppError("Course is required", 400);
-    }
-
-    if (!userData.phone) {
-      throw new AppError("Phone is required", 400);
+    // Validar role se fornecida
+    if (
+      userData.role &&
+      !["STUDENT", "EVALUATOR", "COORDINATOR"].includes(userData.role)
+    ) {
+      throw new AppError("Invalid role", 400);
     }
   }
 
@@ -104,14 +120,24 @@ export class AuthService {
     return emailRegex.test(email);
   }
 
-  private toUserResponse(user: any): UserResponseDto {
+  private generateToken(userId: string, email: string, role: string): string {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new AppError("JWT secret is not defined", 500);
+    }
+
+    const payload = { userId, email, role };
+    return jwt.sign(payload, secret, { expiresIn: "7d" });
+  }
+
+  private toUserResponse(user: User): UserResponseDto {
     return {
       id: user.id,
       name: user.name,
       email: user.email,
-      phone: user.phone,
-      courseId: user.courseId,
+      role: user.role,
       isActive: user.isActive,
+      isFromBpk: user.isFromBpk,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

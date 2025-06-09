@@ -1,3 +1,4 @@
+// src/presentation/middlewares/authMiddleware.ts
 import { Request, Response, NextFunction } from "express";
 import { AuthRepository } from "../../infrastructure/repositories/AuthRepository";
 import { ApiResponse } from "../../shared/utils/response";
@@ -7,9 +8,10 @@ declare global {
   namespace Express {
     interface Request {
       user?: {
-        id: number;
+        id: string;
         email: string;
         name: string;
+        role: "STUDENT" | "EVALUATOR" | "COORDINATOR"; // ✅ ADICIONADO: Role no request
       };
     }
   }
@@ -22,7 +24,6 @@ export class AuthMiddleware {
     this.authRepository = new AuthRepository();
   }
 
-  // ✅ CORREÇÃO: Promise<void> + return statements
   async authenticate(
     req: Request,
     res: Response,
@@ -35,7 +36,7 @@ export class AuthMiddleware {
         res
           .status(401)
           .json(ApiResponse.error("Access token is required", 401));
-        return; // ✅ IMPORTANTE: Para execução aqui
+        return;
       }
 
       const [bearer, token] = authHeader.split(" ");
@@ -46,7 +47,7 @@ export class AuthMiddleware {
           .json(
             ApiResponse.error("Invalid token format. Use: Bearer <token>", 401)
           );
-        return; // ✅ IMPORTANTE: Para execução aqui
+        return;
       }
 
       const secretKey = process.env.JWT_SECRET;
@@ -55,12 +56,13 @@ export class AuthMiddleware {
         res
           .status(500)
           .json(ApiResponse.error("JWT secret not configured", 500));
-        return; // ✅ IMPORTANTE: Para execução aqui
+        return;
       }
 
       const decoded = jwt.verify(token, secretKey) as {
-        userId: number;
+        userId: string;
         email: string;
+        role: "STUDENT" | "EVALUATOR" | "COORDINATOR";
       };
 
       const user = await this.authRepository.findById(decoded.userId);
@@ -69,16 +71,18 @@ export class AuthMiddleware {
         res
           .status(401)
           .json(ApiResponse.error("User not found or inactive", 401));
-        return; // ✅ IMPORTANTE: Para execução aqui
+        return;
       }
 
+      // ✅ MUDANÇA: Incluir role no request.user
       req.user = {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
       };
 
-      next(); // ✅ Continua para o próximo middleware/controller
+      next();
     } catch (error) {
       console.error("❌ Auth middleware error:", error);
 
@@ -95,8 +99,58 @@ export class AuthMiddleware {
       res.status(500).json(ApiResponse.error("Authentication error", 500));
     }
   }
+
+  // ✅ NOVO: Middleware para verificar role específica
+  requireRole(allowedRoles: ("STUDENT" | "EVALUATOR" | "COORDINATOR")[]) {
+    return (req: Request, res: Response, next: NextFunction): void => {
+      const user = req.user;
+
+      if (!user) {
+        res.status(401).json(ApiResponse.error("User not authenticated", 401));
+        return;
+      }
+
+      if (!allowedRoles.includes(user.role)) {
+        res
+          .status(403)
+          .json(ApiResponse.error("Insufficient permissions", 403));
+        return;
+      }
+
+      next();
+    };
+  }
+
+  // ✅ NOVO: Middleware apenas para coordenadores
+  requireCoordinator() {
+    return this.requireRole(["COORDINATOR"]);
+  }
+
+  // ✅ NOVO: Middleware apenas para avaliadores
+  requireEvaluator() {
+    return this.requireRole(["EVALUATOR"]);
+  }
+
+  // ✅ NOVO: Middleware para coordenadores e avaliadores
+  requireStaff() {
+    return this.requireRole(["COORDINATOR", "EVALUATOR"]);
+  }
+
+  // ✅ NOVO: Middleware apenas para estudantes
+  requireStudent() {
+    return this.requireRole(["STUDENT"]);
+  }
 }
 
 const authMiddleware = new AuthMiddleware();
 
+// Exportar middlewares prontos para uso
 export const authenticate = authMiddleware.authenticate.bind(authMiddleware);
+export const requireCoordinator =
+  authMiddleware.requireCoordinator.bind(authMiddleware);
+export const requireEvaluator =
+  authMiddleware.requireEvaluator.bind(authMiddleware);
+export const requireStaff = authMiddleware.requireStaff.bind(authMiddleware);
+export const requireStudent =
+  authMiddleware.requireStudent.bind(authMiddleware);
+export const requireRole = authMiddleware.requireRole.bind(authMiddleware);

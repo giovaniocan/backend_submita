@@ -1,38 +1,71 @@
-// DTO para registrar usuário
-export interface RegisterDto {
+// src/application/dtos/UserDto.ts
+
+// DTO para criação de usuário
+export interface CreateUserDto {
   name: string;
   email: string;
   password: string;
-  phone: string;
-  courseId: number;
+  role?: "STUDENT" | "EVALUATOR" | "COORDINATOR"; // ✅ MUDANÇA: Role opcional (padrão STUDENT)
+  isFromBpk?: boolean;
+}
+
+// DTO para atualização de usuário
+export interface UpdateUserDto {
+  name?: string;
+  email?: string;
+  role?: "STUDENT" | "EVALUATOR" | "COORDINATOR"; // ✅ MUDANÇA: Role direta
+  isFromBpk?: boolean;
+}
+
+// DTO para atualização de senha
+export interface UpdatePasswordDto {
+  currentPassword: string;
+  newPassword: string;
 }
 
 // DTO para resposta (sem senha!)
 export interface UserResponseDto {
-  id: number;
+  id: string;
   name: string;
   email: string;
-  phone: string;
-  courseId: number;
+  role: "STUDENT" | "EVALUATOR" | "COORDINATOR"; // ✅ MUDANÇA: Role direta
   isActive: boolean;
+  isFromBpk: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// DTOs para futuro login JWT:
+// DTO para listagem com filtros
+export interface ListUsersDto {
+  page?: number;
+  limit?: number;
+  search?: string;
+  isActive?: boolean;
+  isFromBpk?: boolean;
+  role?: "STUDENT" | "EVALUATOR" | "COORDINATOR"; // ✅ MUDANÇA: Filtro por role direta
+}
+
+// DTO para login (mantendo compatibilidade)
 export interface LoginDto {
   email: string;
   password: string;
 }
 
+// DTO para resposta de autenticação
 export interface AuthResponseDto {
   user: UserResponseDto;
-  token: string; // JWT token
-  expiresIn: string; // Ex: "24h"
+  token: string;
+  expiresIn: string;
 }
 
 // DTO para payload do JWT
 export interface JwtPayloadDto {
-  userId: number;
+  userId: string;
   email: string;
+  role: "STUDENT" | "EVALUATOR" | "COORDINATOR"; // ✅ MUDANÇA: Role no token
 }
+
+// ✅ REMOVIDO: DTOs relacionados a múltiplas roles
+// - RoleResponseDto
+// - AssignRoleDto
+// - CreateUserWithRolesDto
