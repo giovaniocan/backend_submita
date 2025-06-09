@@ -4,10 +4,13 @@ import { EventController } from "../controllers/EventController";
 import {
   authenticate,
   requireCoordinator,
+  requireStaff,
 } from "../middlewares/authMiddleware";
+import { EventEvaluatorController } from "../controllers/EventEvaluatorController";
 
 const router = Router();
 const eventController = new EventController();
+const eventEvaluatorController = new EventEvaluatorController();
 
 // ========================================
 // ROTAS PÚBLICAS DE LEITURA (sem autenticação)
@@ -33,9 +36,14 @@ router.get("/:id", async (req, res, next) => {
 // ========================================
 
 // Estatísticas de eventos (apenas COORDINATOR)
-router.get("/stats/overview", authenticate, requireCoordinator(), async (req, res, next) => {
-  await eventController.getEventsStats(req, res, next);
-});
+router.get(
+  "/stats/overview",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await eventController.getEventsStats(req, res, next);
+  }
+);
 
 // Criar evento (apenas COORDINATOR)
 router.post("/", authenticate, requireCoordinator(), async (req, res, next) => {
@@ -43,18 +51,76 @@ router.post("/", authenticate, requireCoordinator(), async (req, res, next) => {
 });
 
 // Atualizar evento (apenas COORDINATOR)
-router.put("/:id", authenticate, requireCoordinator(), async (req, res, next) => {
-  await eventController.updateEvent(req, res, next);
-});
+router.put(
+  "/:id",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await eventController.updateEvent(req, res, next);
+  }
+);
 
 // Soft delete - desativar evento (apenas COORDINATOR)
-router.patch("/:id/deactivate", authenticate, requireCoordinator(), async (req, res, next) => {
-  await eventController.softDeleteEvent(req, res, next);
-});
+router.patch(
+  "/:id/deactivate",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await eventController.softDeleteEvent(req, res, next);
+  }
+);
 
 // Hard delete - excluir permanentemente (apenas COORDINATOR)
-router.delete("/:id", authenticate, requireCoordinator(), async (req, res, next) => {
-  await eventController.hardDeleteEvent(req, res, next);
-});
+router.delete(
+  "/:id",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await eventController.hardDeleteEvent(req, res, next);
+  }
+);
+
+// ========================================
+// ✅ NOVAS ROTAS DE AVALIADORES (ADICIONAR NO FINAL)
+// ========================================
+// Adicionar avaliadores ao evento (1 ou múltiplos)
+router.post(
+  "/:eventId/evaluators",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await eventEvaluatorController.addEvaluatorsToEvent(req, res, next);
+  }
+);
+
+// Listar avaliadores de um evento
+router.get(
+  "/:eventId/evaluators",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await eventEvaluatorController.getEventEvaluators(req, res, next);
+  }
+);
+
+// Buscar avaliador específico no evento
+router.get(
+  "/:eventId/evaluators/:id",
+  authenticate,
+  requireStaff(),
+  async (req, res, next) => {
+    await eventEvaluatorController.getEventOneEvaluator(req, res, next);
+  }
+);
+
+// Remover avaliador do evento
+router.delete(
+  "/:eventId/evaluators/:userId",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await eventEvaluatorController.removeEvaluatorFromEvent(req, res, next);
+  }
+);
 
 export { router as eventRoutes };
