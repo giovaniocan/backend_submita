@@ -92,15 +92,18 @@ router.post(
     await eventEvaluatorController.addEvaluatorsToEvent(req, res, next);
   }
 );
-/*
+
 // Listar avaliadores de um evento
-router.get("/:eventId/evaluators", 
-  authenticate, 
-  requireStaff(),
+router.get(
+  "/:eventId/evaluators",
+  authenticate,
+  requireCoordinator(),
   async (req, res, next) => {
     await eventEvaluatorController.getEventEvaluators(req, res, next);
   }
 );
+
+/*
 
 // Buscar avaliador específico no evento
 router.get("/evaluators/:id", 

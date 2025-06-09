@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import { EventEvaluatorService } from "../../application/services/EventEvaluatorService";
-import { AddEvaluatorsToEventDto } from "../../application/dtos/EventEvaluatorDto";
+import {
+  AddEvaluatorsToEventDto,
+  ListEventEvaluatorsDto,
+} from "../../application/dtos/EventEvaluatorDto";
 import { ApiResponse } from "../../shared/utils/response";
 import { AppError } from "../../shared/errors/AppError";
 
@@ -58,6 +61,35 @@ export class EventEvaluatorController {
       res.status(statusCode).json(ApiResponse.success(result, message));
     } catch (error) {
       this.handleError(error, res, "Add evaluators to event error");
+    }
+  }
+
+  async getEventEvaluators(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { eventId } = req.params;
+      const filters: ListEventEvaluatorsDto = {
+        page: req.query.page ? parseInt(req.query.page as string) : undefined,
+        limit: req.query.limit
+          ? parseInt(req.query.limit as string)
+          : undefined,
+        search: req.query.search as string,
+        isActive: req.query.isActive
+          ? req.query.isActive === "true"
+          : undefined,
+      };
+
+      const result = await this.eventEvaluatorService.getEventEvaluators(
+        eventId,
+        filters
+      );
+
+      res
+        .status(200)
+        .json(
+          ApiResponse.success(result, "Event evaluators retrieved successfully")
+        );
+    } catch (error) {
+      this.handleError(error, res, "Get event evaluators error");
     }
   }
 

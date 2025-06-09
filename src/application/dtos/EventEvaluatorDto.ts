@@ -39,3 +39,19 @@ export interface AddEvaluatorsResponseDto {
     totalErrors: number;
   };
 }
+
+//DTO para listar avaliadores de um evento
+export interface ListEventEvaluatorsDto {
+  page?: number; // Página para paginação
+  limit?: number; // Limite de itens por página
+  search?: string; // Termo de busca opcional
+  isActive?: boolean; // Filtrar por avaliadores ativos
+}
+
+export interface PaginatedEventEvaluatorsDto {
+  evaluators: EventEvaluatorResponseDto[]; // Array com os avaliadores da página atual
+  total: number; // Total de avaliadores (sem filtro de página)
+  page: number; // Página atual que foi retornada
+  limit: number; // Quantos itens por página
+  totalPages: number; // Total de páginas disponíveis
+}

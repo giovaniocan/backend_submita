@@ -7,6 +7,8 @@ import {
   AddEvaluatorsResponseDto,
   AddEvaluatorsToEventDto,
   EventEvaluatorResponseDto,
+  ListEventEvaluatorsDto,
+  PaginatedEventEvaluatorsDto,
 } from "../dtos/EventEvaluatorDto";
 
 export class EventEvaluatorService {
@@ -93,6 +95,55 @@ export class EventEvaluatorService {
 
     return { added, skipped, errors, summary };
   }
+
+  async getEventEvaluators(
+    eventId: string,
+    filters: ListEventEvaluatorsDto
+  ): Promise<PaginatedEventEvaluatorsDto> {
+    //validando se o ID do evento é válido
+    if (!this.isValidUUID(eventId)) {
+      throw new AppError("Invalid event ID format", 400);
+    }
+
+    //validando se o evento existe e está ativo
+    const eventExist = await this.eventRepository.findActiveById(eventId);
+    if (!eventExist) {
+      throw new AppError("Event not found or inactive", 404);
+    }
+
+    // Validando os filtros de paginação
+    if (filters.page && filters.page < 1) {
+      throw new AppError("Page number must be greater than 0", 400);
+    }
+
+    if (filters.limit && (filters.limit < 1 || filters.limit > 100)) {
+      throw new AppError("Limit must be between 1 and 100", 400);
+    }
+
+    const { evaluators, total } =
+      await this.eventEvaluatorRepository.findManyWithPagination(
+        eventId,
+        filters
+      );
+
+    // 5️⃣ CALCULAR INFORMAÇÕES DE PAGINAÇÃO
+    const page = filters.page || 1; // Se não passou página, assume 1
+    const limit = filters.limit || 10; // Se não passou limit, assume 10
+    const totalPages = Math.ceil(total / limit); // 47 itens ÷ 10 = 4.7 → 5 páginas
+
+    // 6️⃣ MONTAR RESPOSTA FINAL
+    return {
+      evaluators: evaluators.map((evaluator: EventEvaluator) =>
+        this.toEventEvaluatorResponse(evaluator)
+      ),
+      total,
+      page,
+      limit,
+      totalPages,
+    };
+  }
+
+  // PRIVATE METHODS
 
   private isValidUUID(uuid: string): boolean {
     const uuidRegex =
