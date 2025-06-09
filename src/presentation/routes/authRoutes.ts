@@ -3,6 +3,7 @@ import { Router } from "express";
 import { AuthController } from "../controllers/AuthController";
 import {
   authenticate,
+  requireCoordinator,
   // ✅ MIDDLEWARES DE ROLE - DESCOMENTE QUANDO PRECISAR
   // requireCoordinator,
   // requireEvaluator,
@@ -36,6 +37,16 @@ router.post("/login", async (req, res, next) => {
 router.get("/profile", authenticate, async (req, res, next) => {
   await authController.getProfile(req, res, next);
 });
+
+// Register Evaluator (apenas COORDENADORES)
+router.post(
+  "/register-evaluator",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await authController.registerEvaluator(req, res, next);
+  }
+);
 
 // ========================================
 // 🔒 EXEMPLOS DE ROTAS COM CONTROLE DE ROLE

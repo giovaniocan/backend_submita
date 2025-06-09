@@ -1,6 +1,6 @@
 import { app } from "./app";
 
-const PORT = 3000;
+const PORT = 8080;
 
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);

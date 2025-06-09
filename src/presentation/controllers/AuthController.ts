@@ -96,4 +96,69 @@ export class AuthController {
       res.status(500).json(ApiResponse.error("Internal server error", 500));
     }
   }
+
+  // ========================================
+  // CRIAR AVALIADOR (Apenas Coordenadores)
+  // ========================================
+  async registerEvaluator(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      // Verificar se o usuário logado é coordenador
+      const currentUser = req.user;
+      if (!currentUser || currentUser.role !== "COORDINATOR") {
+        res
+          .status(403)
+          .json(
+            ApiResponse.error("Only coordinators can create evaluators", 403)
+          );
+        return;
+      }
+
+      // Validar dados recebidos
+      const { name, email, password, isFromBpk } = req.body;
+
+      if (!name || !email || !password) {
+        res
+          .status(400)
+          .json(
+            ApiResponse.error("Name, email and password are required", 400)
+          );
+        return;
+      }
+
+      // Criar dados do avaliador
+      const evaluatorData: CreateUserDto = {
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
+        password,
+        role: "EVALUATOR", // Força o role como EVALUATOR
+        isFromBpk: isFromBpk !== undefined ? isFromBpk : true,
+      };
+
+      // Criar o avaliador usando o serviço
+      const evaluator = await this.authService.createUser(evaluatorData);
+
+      res
+        .status(201)
+        .json(
+          ApiResponse.success(
+            evaluator,
+            `Evaluator '${evaluator.name}' created successfully!`
+          )
+        );
+    } catch (error) {
+      if (error instanceof AppError) {
+        res
+          .status(error.statusCode)
+          .json(ApiResponse.error(error.message, error.statusCode));
+        return;
+      }
+
+      console.error("❌ Create evaluator error:", error);
+      res.status(500).json(ApiResponse.error("Internal server error", 500));
+    }
+  }
 }

@@ -21,21 +21,27 @@ npm install
 ### 2. Configurar .env
 
 ```env
-DATABASE_URL="postgresql://root:root@localhost:5433/auth_db?schema=public"
-JWT_SECRET="seu-jwt-secret-aqui"
-PORT=3000
+# Server
+PORT=8080
+NODE_ENV=development
+
+# Database
+DATABASE_URL="postgresql://root:root@localhost:5433/submita_db?schema=public"
+
+# JWT - NOVAS VARIÁVEIS
+JWT_SECRET="seu-jwt-aqui"
+JWT_EXPIRES_IN=24h
 ```
 
 ### 3. Rodar banco e migrations
 
 ```bash
 docker-compose up -d
-npx prisma generate
-npx prisma migrate dev
-npm run dev
+npm prisma:generate-all
+npm run dev:old
 ```
 
-Servidor: `http://localhost:3000` 🎉
+Servidor: `http://localhost:8080` 🎉
 
 ## 🔐 Sistema de Roles
 
@@ -93,17 +99,17 @@ Authorization: Bearer SEU_TOKEN_AQUI
 
 ```bash
 # 1. Registrar
-curl -X POST http://localhost:3000/api/auth/register \
+curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"name":"João","email":"joao@email.com","password":"123456"}'
 
 # 2. Login
-curl -X POST http://localhost:3000/api/auth/login \
+curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"joao@email.com","password":"123456"}'
 
 # 3. Profile (usar token do login)
-curl -X GET http://localhost:3000/api/auth/profile \
+curl -X GET http://localhost:8080/api/auth/profile \
   -H "Authorization: Bearer SEU_TOKEN_AQUI"
 ```
 
@@ -111,7 +117,7 @@ curl -X GET http://localhost:3000/api/auth/profile \
 
 ```http
 ### Registro
-POST http://localhost:3000/api/auth/register
+POST http://localhost:8080/api/auth/register
 Content-Type: application/json
 
 {
@@ -121,7 +127,7 @@ Content-Type: application/json
 }
 
 ### Login
-POST http://localhost:3000/api/auth/login
+POST http://localhost:8080/api/auth/login
 Content-Type: application/json
 
 {
@@ -130,7 +136,7 @@ Content-Type: application/json
 }
 
 ### Profile
-GET http://localhost:3000/api/auth/profile
+GET http://localhost:8080/api/auth/profile
 Authorization: Bearer {{token_do_login}}
 ```
 
