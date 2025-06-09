@@ -12,14 +12,15 @@ router.use("/auth", authRoutes);
 // ✅ DESCOMENTE CONFORME FOR CRIANDO
 // ========================================
 
+// Rotas de eventos  
+import { eventRoutes } from "./eventRoutes";
+router.use("/events", eventRoutes);
+
 /*
 // Rotas de usuários (CRUD completo)
 import { userRoutes } from "./userRoutes";
 router.use("/users", userRoutes);
 
-// Rotas de eventos  
-import { eventRoutes } from "./eventRoutes";
-router.use("/events", eventRoutes);
 
 // Rotas de artigos
 import { articleRoutes } from "./articleRoutes";
