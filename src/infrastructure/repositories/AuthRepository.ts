@@ -33,6 +33,12 @@ export class AuthRepository {
     });
   }
 
+  async updateFirstLoginToFalse(id: string) {
+    await prisma.user.update({
+      where: { id },
+      data: { isFirstLogin: false },
+    });
+  }
   // Buscar usuário ativo por ID
   async findActiveById(id: string): Promise<User | null> {
     return await prisma.user.findUnique({

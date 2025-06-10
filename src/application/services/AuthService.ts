@@ -33,11 +33,19 @@ export class AuthService {
     // Hash da senha
     const hashedPassword = await bcrypt.hash(userData.password, 12);
 
+    let isFirstLogin = false;
+
+    // Se role for EVALUATOR ou COORDINATOR, marcar como primeiro login
+    if (userData.role === "EVALUATOR" || userData.role === "COORDINATOR") {
+      isFirstLogin = true;
+    }
+
     // Criar usuário com role padrão STUDENT
     const userToCreate = {
       ...userData,
       password: hashedPassword,
       role: userData.role || ("STUDENT" as const),
+      isFirstLogin,
     };
 
     const user = await this.authRepository.create(userToCreate);
@@ -70,10 +78,16 @@ export class AuthService {
     // Gerar token
     const token = this.generateToken(user.id, user.email, user.role);
 
+    // Atualizar isFirstLogin se for o primeiro login
+    if (user.isFirstLogin === true) {
+      await this.authRepository.updateFirstLoginToFalse(user.id);
+    }
+
     return {
       user: this.toUserResponse(user),
       token,
       expiresIn: "7d",
+      isFirstLogin: user.isFirstLogin,
     };
   }
 
@@ -137,6 +151,7 @@ export class AuthService {
       role: user.role,
       isActive: user.isActive,
       isFromBpk: user.isFromBpk,
+      isFirstLogin: user.isFirstLogin,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
