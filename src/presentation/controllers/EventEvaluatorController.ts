@@ -101,7 +101,6 @@ export class EventEvaluatorController {
     try {
       // Pegar o ID do EventEvaluator da URL
       const { id } = req.params; // De /events/evaluators/:id
-      console.log(`Fetching evaluator with ID: ${id}`);
 
       const result = await this.eventEvaluatorService.getEventEvaluator(id);
 

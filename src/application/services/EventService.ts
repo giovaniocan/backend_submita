@@ -8,12 +8,15 @@ import {
   PaginatedEventsDto,
 } from "../dtos/EventDto";
 import { Event } from "../../generated/prisma";
+import { ChecklistRepository } from "../../infrastructure/repositories/ChecklistRepository";
 
 export class EventService {
   private eventRepository: EventRepository;
+  private checklistRepository: ChecklistRepository; // Adicionei a dependência do ChecklistRepository
 
   constructor() {
     this.eventRepository = new EventRepository();
+    this.checklistRepository = new ChecklistRepository(); // Inicializando o ChecklistRepository
   }
 
   // ========================================
@@ -33,9 +36,12 @@ export class EventService {
   // ========================================
   // READ
   // ========================================
-  
+
   // Buscar evento por ID
-  async getEventById(id: string, includeStats = false): Promise<EventResponseDto> {
+  async getEventById(
+    id: string,
+    includeStats = false
+  ): Promise<EventResponseDto> {
     if (!this.isValidUUID(id)) {
       throw new AppError("Invalid event ID format", 400);
     }
@@ -43,6 +49,23 @@ export class EventService {
     const event = includeStats
       ? await this.eventRepository.findByIdWithStats(id)
       : await this.eventRepository.findById(id);
+
+    if (!event) {
+      throw new AppError("Event not found", 404);
+    }
+
+    return this.toEventResponse(event);
+  }
+
+  async getActiveEventById(
+    id: string,
+    includeStats = false
+  ): Promise<EventResponseDto> {
+    if (!this.isValidUUID(id)) {
+      throw new AppError("Invalid event ID format", 400);
+    }
+
+    const event = await this.eventRepository.findActiveById(id);
 
     if (!event) {
       throw new AppError("Event not found", 404);
@@ -91,7 +114,10 @@ export class EventService {
   // ========================================
   // UPDATE
   // ========================================
-  async updateEvent(id: string, eventData: UpdateEventDto): Promise<EventResponseDto> {
+  async updateEvent(
+    id: string,
+    eventData: UpdateEventDto
+  ): Promise<EventResponseDto> {
     if (!this.isValidUUID(id)) {
       throw new AppError("Invalid event ID format", 400);
     }
@@ -119,7 +145,7 @@ export class EventService {
   // ========================================
   // DELETE
   // ========================================
-  
+
   // Soft delete (recomendado)
   async softDeleteEvent(id: string): Promise<{ message: string }> {
     if (!this.isValidUUID(id)) {
@@ -163,10 +189,65 @@ export class EventService {
     return { message: "Event deleted permanently" };
   }
 
+  //CHECKLISTS
+
+  async assignChecklistToEvent(
+    eventId: string,
+    checklistId: string
+  ): Promise<EventResponseDto> {
+    const event = await this.eventRepository.findActiveById(eventId);
+    if (!event) {
+      throw new AppError("Event not found or inactive", 404);
+    }
+
+    const checklist = await this.checklistRepository.findActiveById(
+      checklistId
+    );
+    if (!checklist) {
+      throw new AppError("Checklist not found or inactive", 404);
+    }
+
+    // 3️⃣ VERIFICAR SE O EVENTO JÁ TEM UM CHECKLIST
+    if (event.checklistId) {
+      throw new AppError(
+        `Event already has a checklist assigned. Remove the current checklist first.`,
+        400
+      );
+    }
+
+    // 4️⃣ ATRIBUIR O CHECKLIST AO EVENTO
+    const updatedEvent = await this.eventRepository.assignChecklist(
+      eventId,
+      checklistId
+    );
+
+    // 5️⃣ RETORNAR RESPOSTA FORMATADA
+    return this.toEventResponse(updatedEvent);
+  }
+
+  // ========================================
+  // REMOVE CHECKLIST FROM EVENT
+  // ========================================
+  async removeChecklistFromEvent(eventId: string): Promise<EventResponseDto> {
+    const event = await this.eventRepository.findActiveById(eventId);
+    if (!event) {
+      throw new AppError("Event not found or inactive", 404);
+    }
+
+    if (!event.checklistId) {
+      throw new AppError("Event does not have a checklist assigned", 400);
+    }
+
+    // 3️⃣ REMOVER O CHECKLIST DO EVENTO
+    const updatedEvent = await this.eventRepository.removeChecklist(eventId);
+
+    // 4️⃣ RETORNAR RESPOSTA FORMATADA
+    return this.toEventResponse(updatedEvent);
+  }
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================
-  
+
   private validateCreateData(eventData: CreateEventDto): void {
     if (!eventData.name || eventData.name.trim().length < 3) {
       throw new AppError("Event name must have at least 3 characters", 400);
@@ -197,8 +278,12 @@ export class EventService {
     const submissionEnd = new Date(eventData.submissionEndDate);
 
     // Validar se as datas são válidas
-    if (isNaN(eventStart.getTime()) || isNaN(eventEnd.getTime()) ||
-        isNaN(submissionStart.getTime()) || isNaN(submissionEnd.getTime())) {
+    if (
+      isNaN(eventStart.getTime()) ||
+      isNaN(eventEnd.getTime()) ||
+      isNaN(submissionStart.getTime()) ||
+      isNaN(submissionEnd.getTime())
+    ) {
       throw new AppError("Invalid date format", 400);
     }
 
@@ -223,11 +308,16 @@ export class EventService {
     }
   }
 
-  private validateUpdateDates(eventData: UpdateEventDto, existingEvent: Event): void {
+  private validateUpdateDates(
+    eventData: UpdateEventDto,
+    existingEvent: Event
+  ): void {
     const eventStart = eventData.eventStartDate || existingEvent.eventStartDate;
     const eventEnd = eventData.eventEndDate || existingEvent.eventEndDate;
-    const submissionStart = eventData.submissionStartDate || existingEvent.submissionStartDate;
-    const submissionEnd = eventData.submissionEndDate || existingEvent.submissionEndDate;
+    const submissionStart =
+      eventData.submissionStartDate || existingEvent.submissionStartDate;
+    const submissionEnd =
+      eventData.submissionEndDate || existingEvent.submissionEndDate;
 
     // Aplicar as mesmas validações do create
     if (eventEnd <= eventStart) {
@@ -253,7 +343,8 @@ export class EventService {
   }
 
   private isValidUUID(uuid: string): boolean {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(uuid);
   }
 
