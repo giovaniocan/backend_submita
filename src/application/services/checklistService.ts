@@ -98,17 +98,11 @@ export class ChecklistService {
       throw new AppError("Checklist is already inactive", 400);
     }
 
-    console.log(`🗑️ Service: Desativando checklist '${checklist.name}'`);
-
     // 4️⃣ SOFT DELETE - DESATIVAR O CHECKLIST
     const deletedChecklist = await this.checklistRepository.softDelete(id);
 
     // 5️⃣ TAMBÉM DESATIVAR TODAS AS PERGUNTAS RELACIONADAS
     await this.checklistRepository.deactivateAllQuestions(id);
-
-    console.log(
-      `✅ Service: Checklist '${checklist.name}' e suas perguntas foram desativados`
-    );
 
     // 6️⃣ RETORNAR RESPOSTA FORMATADA
     return this.toChecklistResponse(deletedChecklist);

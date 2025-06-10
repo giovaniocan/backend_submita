@@ -182,8 +182,6 @@ export class ChecklistRepository {
       },
     });
 
-    console.log(`🗑️ Repository: ${result.count} pergunta(s) desativada(s)`);
-
     return result.count; // Retorna quantas perguntas foram desativadas
   }
 

@@ -123,4 +123,25 @@ router.delete(
   }
 );
 
+// ========================================
+// ✅ NOVAS ROTAS DE CHECKLIST NO EVENTO (ADICIONAR NO FINAL)
+// ========================================
+router.patch(
+  "/:eventId/checklist",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await eventController.assignChecklistToEvent(req, res, next);
+  }
+);
+// Remover checklist do evento (apenas COORDINATOR)
+router.delete(
+  "/:eventId/checklist",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await eventController.removeChecklistFromEvent(req, res, next);
+  }
+);
+
 export { router as eventRoutes };

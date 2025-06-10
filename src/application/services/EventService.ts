@@ -8,12 +8,15 @@ import {
   PaginatedEventsDto,
 } from "../dtos/EventDto";
 import { Event } from "../../generated/prisma";
+import { ChecklistRepository } from "../../infrastructure/repositories/ChecklistRepository";
 
 export class EventService {
   private eventRepository: EventRepository;
+  private checklistRepository: ChecklistRepository; // Adicionei a dependência do ChecklistRepository
 
   constructor() {
     this.eventRepository = new EventRepository();
+    this.checklistRepository = new ChecklistRepository(); // Inicializando o ChecklistRepository
   }
 
   // ========================================
@@ -186,6 +189,61 @@ export class EventService {
     return { message: "Event deleted permanently" };
   }
 
+  //CHECKLISTS
+
+  async assignChecklistToEvent(
+    eventId: string,
+    checklistId: string
+  ): Promise<EventResponseDto> {
+    const event = await this.eventRepository.findActiveById(eventId);
+    if (!event) {
+      throw new AppError("Event not found or inactive", 404);
+    }
+
+    const checklist = await this.checklistRepository.findActiveById(
+      checklistId
+    );
+    if (!checklist) {
+      throw new AppError("Checklist not found or inactive", 404);
+    }
+
+    // 3️⃣ VERIFICAR SE O EVENTO JÁ TEM UM CHECKLIST
+    if (event.checklistId) {
+      throw new AppError(
+        `Event already has a checklist assigned. Remove the current checklist first.`,
+        400
+      );
+    }
+
+    // 4️⃣ ATRIBUIR O CHECKLIST AO EVENTO
+    const updatedEvent = await this.eventRepository.assignChecklist(
+      eventId,
+      checklistId
+    );
+
+    // 5️⃣ RETORNAR RESPOSTA FORMATADA
+    return this.toEventResponse(updatedEvent);
+  }
+
+  // ========================================
+  // REMOVE CHECKLIST FROM EVENT
+  // ========================================
+  async removeChecklistFromEvent(eventId: string): Promise<EventResponseDto> {
+    const event = await this.eventRepository.findActiveById(eventId);
+    if (!event) {
+      throw new AppError("Event not found or inactive", 404);
+    }
+
+    if (!event.checklistId) {
+      throw new AppError("Event does not have a checklist assigned", 400);
+    }
+
+    // 3️⃣ REMOVER O CHECKLIST DO EVENTO
+    const updatedEvent = await this.eventRepository.removeChecklist(eventId);
+
+    // 4️⃣ RETORNAR RESPOSTA FORMATADA
+    return this.toEventResponse(updatedEvent);
+  }
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================

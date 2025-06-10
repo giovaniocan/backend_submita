@@ -196,4 +196,53 @@ export class EventRepository {
       return acc;
     }, {} as { [key: string]: number });
   }
+
+  async assignChecklist(eventId: string, checklistId: string): Promise<Event> {
+    return await prisma.event.update({
+      where: { id: eventId },
+      data: {
+        checklistId,
+        updatedAt: new Date(),
+      },
+      include: {
+        checklist: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            isActive: true,
+            _count: {
+              select: {
+                questions: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            articles: true,
+            eventEvaluators: true,
+          },
+        },
+      },
+    });
+  }
+
+  async removeChecklist(eventId: string): Promise<Event> {
+    return await prisma.event.update({
+      where: { id: eventId },
+      data: {
+        checklistId: null,
+        updatedAt: new Date(),
+      },
+      include: {
+        _count: {
+          select: {
+            articles: true,
+            eventEvaluators: true,
+          },
+        },
+      },
+    });
+  }
 }

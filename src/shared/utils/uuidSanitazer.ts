@@ -25,12 +25,10 @@ export class UuidSanitizer {
 
     // 2️⃣ VALIDAR formato UUID
     if (!this.UUID_REGEX.test(cleanUuid)) {
-      console.log(`❌ UUID inválido: '${uuid}' → '${cleanUuid}'`);
       return null;
     }
 
     // 3️⃣ RETORNAR UUID LIMPO
-    console.log(`✅ UUID sanitizado: '${uuid}' → '${cleanUuid}'`);
     return cleanUuid;
   }
 

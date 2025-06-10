@@ -138,8 +138,6 @@ export class ChecklistController {
         return;
       }
 
-      console.log("🗑️ Deletando checklist:", checklistId);
-
       // 3️⃣ CHAMAR O SERVICE
       const result = await this.checklistService.deleteChecklist(checklistId);
 

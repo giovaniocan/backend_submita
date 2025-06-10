@@ -101,7 +101,6 @@ export class QuestionController {
   ): Promise<void> {
     try {
       // 1️⃣ EXTRAIR DADOS DO PARAMS E BODY
-      console.log("Chegou no controller de perguntas");
       const { checklistId } = req.params;
       const questionsData: CreateQuestionsDto = req.body;
 
@@ -130,8 +129,6 @@ export class QuestionController {
           .json(ApiResponse.error("At least one question is required", 400));
         return;
       }
-
-      console.log("Chegou aqui, e as perguntas são:", questionsData.questions);
 
       // 3️⃣ CHAMAR O SERVICE
       const result = await this.questionService.createMultipleQuestions(
