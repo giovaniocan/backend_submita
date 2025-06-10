@@ -42,7 +42,7 @@ export class ChecklistService {
     return this.toChecklistResponse(checklist);
   }
 
-  async getChecklistById(id: string): Promise<ChecklistWithQuestionsDto> {
+  async getChecklistById(id: string): Promise<CreateChecklistDto> {
     // 1️⃣ VALIDAR FORMATO DO ID
     if (!this.isValidUUID(id)) {
       throw new AppError("Invalid checklist ID format", 400);
@@ -80,6 +80,38 @@ export class ChecklistService {
         this.toChecklistResponse(checklist)
       );
     }
+  }
+  async deleteChecklist(id: string): Promise<ChecklistResponseDto> {
+    // 1️⃣ VALIDAR ID
+    if (!this.isValidUUID(id)) {
+      throw new AppError("Invalid checklist ID format", 400);
+    }
+
+    // 2️⃣ VERIFICAR SE O CHECKLIST EXISTE
+    const checklist = await this.checklistRepository.findById(id);
+    if (!checklist) {
+      throw new AppError("Checklist not found", 404);
+    }
+
+    // 3️⃣ VERIFICAR SE JÁ ESTÁ INATIVO
+    if (!checklist.isActive) {
+      throw new AppError("Checklist is already inactive", 400);
+    }
+
+    console.log(`🗑️ Service: Desativando checklist '${checklist.name}'`);
+
+    // 4️⃣ SOFT DELETE - DESATIVAR O CHECKLIST
+    const deletedChecklist = await this.checklistRepository.softDelete(id);
+
+    // 5️⃣ TAMBÉM DESATIVAR TODAS AS PERGUNTAS RELACIONADAS
+    await this.checklistRepository.deactivateAllQuestions(id);
+
+    console.log(
+      `✅ Service: Checklist '${checklist.name}' e suas perguntas foram desativados`
+    );
+
+    // 6️⃣ RETORNAR RESPOSTA FORMATADA
+    return this.toChecklistResponse(deletedChecklist);
   }
   // ========================================
   // MÉTODOS PRIVADOS

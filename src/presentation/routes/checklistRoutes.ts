@@ -39,4 +39,12 @@ router.get(
   }
 );
 
+router.delete(
+  "/:checklistId",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await checklistController.deleteChecklist(req, res, next);
+  }
+);
 export { router as checklistRoutes };

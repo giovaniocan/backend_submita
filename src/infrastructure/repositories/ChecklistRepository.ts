@@ -151,6 +151,86 @@ export class ChecklistRepository {
     });
   }
 
+  async softDelete(id: string): Promise<Checklist> {
+    return await prisma.checklist.update({
+      where: { id },
+      data: {
+        isActive: false,
+        updatedAt: new Date(), // ✅ Atualizar timestamp
+      },
+      include: {
+        _count: {
+          select: {
+            questions: true,
+            events: true,
+          },
+        },
+      },
+    });
+  }
+
+  // ✅ NOVO: Desativar todas as perguntas do checklist
+  async deactivateAllQuestions(checklistId: string): Promise<number> {
+    const result = await prisma.question.updateMany({
+      where: {
+        checklistId,
+        isActive: true, // Só desativa as que estão ativas
+      },
+      data: {
+        isActive: false,
+        updatedAt: new Date(),
+      },
+    });
+
+    console.log(`🗑️ Repository: ${result.count} pergunta(s) desativada(s)`);
+
+    return result.count; // Retorna quantas perguntas foram desativadas
+  }
+
+  // ========================================
+  // UTILITIES
+  // ========================================
+
+  // Verificar se checklist está sendo usado em eventos ATIVOS
+  async isUsedInActiveEvents(id: string): Promise<boolean> {
+    const eventCount = await prisma.event.count({
+      where: {
+        checklistId: id,
+        isActive: true, // ✅ Só eventos ativos
+      },
+    });
+    return eventCount > 0;
+  }
+
+  // Contar quantas perguntas ATIVAS o checklist tem
+  async countActiveQuestions(id: string): Promise<number> {
+    return await prisma.question.count({
+      where: {
+        checklistId: id,
+        isActive: true, // ✅ Só perguntas ativas
+      },
+    });
+  }
+
+  // ✅ NOVO: Reativar checklist (caso precise)
+  async reactivate(id: string): Promise<Checklist> {
+    return await prisma.checklist.update({
+      where: { id },
+      data: {
+        isActive: true,
+        updatedAt: new Date(),
+      },
+      include: {
+        _count: {
+          select: {
+            questions: true,
+            events: true,
+          },
+        },
+      },
+    });
+  }
+
   // ========================================
   // UTILITIES
   // ========================================

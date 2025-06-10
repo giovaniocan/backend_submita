@@ -121,6 +121,42 @@ export class ChecklistController {
     }
   }
 
+  async deleteChecklist(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      // 1️⃣ EXTRAIR ID DOS PARAMS
+      const { checklistId } = req.params;
+
+      // 2️⃣ VALIDAR SE O checklistId FOI FORNECIDO
+      if (!checklistId) {
+        res
+          .status(400)
+          .json(ApiResponse.error("Checklist ID is required", 400));
+        return;
+      }
+
+      console.log("🗑️ Deletando checklist:", checklistId);
+
+      // 3️⃣ CHAMAR O SERVICE
+      const result = await this.checklistService.deleteChecklist(checklistId);
+
+      // 4️⃣ RETORNAR SUCESSO
+      res
+        .status(200)
+        .json(
+          ApiResponse.success(
+            result,
+            `Checklist '${result.name}' deactivated successfully!`
+          )
+        );
+    } catch (error) {
+      this.handleError(error, res, "Delete checklist error");
+    }
+  }
+
   // ========================================
   // MÉTODO PRIVADO PARA TRATAMENTO DE ERROS
   // ========================================
