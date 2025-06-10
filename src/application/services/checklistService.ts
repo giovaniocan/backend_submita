@@ -113,6 +113,7 @@ export class ChecklistService {
     // 6️⃣ RETORNAR RESPOSTA FORMATADA
     return this.toChecklistResponse(deletedChecklist);
   }
+
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================

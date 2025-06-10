@@ -142,6 +142,48 @@ export class QuestionService {
     return { added, summary };
   }
 
+  async deleteQuestion(
+    checklistId: string,
+    questionId: string
+  ): Promise<QuestionResponseDto> {
+    if (!this.isValidUUID(checklistId)) {
+      throw new AppError("Invalid checklist ID format", 400);
+    }
+
+    const checklist = await this.checklistRepository.findActiveById(
+      checklistId
+    );
+    if (!checklist) {
+      throw new AppError("Checklist not found or inactive", 404);
+    }
+
+    const question = await this.questionRepository.findById(questionId);
+    if (!question) {
+      throw new AppError("Question not found", 404);
+    }
+
+    if (question.checklistId !== checklistId) {
+      throw new AppError("Question does not belong to this checklist", 400);
+    }
+
+    if (!question.isActive) {
+      throw new AppError("Question is already inactive", 400);
+    }
+
+    // 5️⃣ SOFT DELETE - DESATIVAR A PERGUNTA
+    const deletedQuestion = await this.questionRepository.softDelete(
+      questionId
+    );
+
+    // 6️⃣ REORGANIZAR ORDERS DAS PERGUNTAS RESTANTES (OPCIONAL)
+    await this.questionRepository.reorderQuestions(checklistId);
+
+    console.log(`✅ Service: Pergunta removida e orders reorganizadas`);
+
+    // 7️⃣ RETORNAR RESPOSTA FORMATADA
+    return this.toQuestionResponse(deletedQuestion);
+  }
+
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================

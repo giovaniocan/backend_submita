@@ -47,4 +47,13 @@ router.delete(
     await checklistController.deleteChecklist(req, res, next);
   }
 );
+
+router.delete(
+  "/:checklistId/questions/:questionId",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await questionController.deleteQuestion(req, res, next);
+  }
+);
 export { router as checklistRoutes };

@@ -158,6 +158,43 @@ export class QuestionController {
     }
   }
 
+  async deleteQuestion(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { checklistId, questionId } = req.params;
+
+      if (!checklistId) {
+        res
+          .status(400)
+          .json(ApiResponse.error("Checklist ID is required", 400));
+        return;
+      }
+
+      if (!questionId) {
+        res.status(400).json(ApiResponse.error("Question ID is required", 400));
+        return;
+      }
+
+      const result = await this.questionService.deleteQuestion(
+        checklistId.trim(),
+        questionId.trim()
+      );
+
+      res
+        .status(200)
+        .json(
+          ApiResponse.success(
+            result,
+            `Question '${result.description}' removed from checklist successfully!`
+          )
+        );
+    } catch (error) {
+      this.handleError(error, res, "Delete question error");
+    }
+  }
   // ========================================
   // MÉTODO PRIVADO PARA TRATAMENTO DE ERROS
   // ========================================
