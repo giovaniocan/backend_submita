@@ -80,6 +80,34 @@ export class ChecklistRepository {
     });
   }
 
+  async findByIdWithQuestions(id: string): Promise<Checklist | null> {
+    return await prisma.checklist.findUnique({
+      where: { id },
+      include: {
+        questions: {
+          where: { isActive: true },
+          orderBy: { order: "asc" },
+          select: {
+            id: true,
+            description: true,
+            type: true,
+            isRequired: true,
+            order: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+        _count: {
+          select: {
+            questions: true,
+            events: true,
+          },
+        },
+      },
+    });
+  }
+
   // ========================================
   // UTILITIES
   // ========================================

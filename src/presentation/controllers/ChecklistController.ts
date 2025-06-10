@@ -58,6 +58,40 @@ export class ChecklistController {
     }
   }
 
+  async getChecklistWithQuestions(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { checklistId } = req.params;
+
+      // Validar se o checklistId foi fornecido
+      if (!checklistId) {
+        res
+          .status(400)
+          .json(ApiResponse.error("Checklist ID is required", 400));
+        return;
+      }
+
+      // Chamar o serviço para obter o checklist com perguntas
+      const checklistWithQuestions =
+        await this.checklistService.getChecklistById(checklistId);
+
+      // Retornar sucesso com os dados do checklist
+      res
+        .status(200)
+        .json(
+          ApiResponse.success(
+            checklistWithQuestions,
+            "Checklist retrieved successfully"
+          )
+        );
+    } catch (error) {
+      this.handleError(error, res, "Get checklist with questions error");
+    }
+  }
+
   // ========================================
   // MÉTODO PRIVADO PARA TRATAMENTO DE ERROS
   // ========================================

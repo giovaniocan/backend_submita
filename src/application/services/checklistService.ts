@@ -2,8 +2,13 @@
 
 import { ChecklistRepository } from "../../infrastructure/repositories/ChecklistRepository";
 import { AppError } from "../../shared/errors/AppError";
-import { CreateChecklistDto, ChecklistResponseDto } from "../dtos/ChecklistDto";
+import {
+  CreateChecklistDto,
+  ChecklistResponseDto,
+  ChecklistWithQuestionsDto,
+} from "../dtos/ChecklistDto";
 import { Checklist, Question } from "../../generated/prisma";
+import { create } from "domain";
 
 export class ChecklistService {
   private checklistRepository: ChecklistRepository;
@@ -35,6 +40,22 @@ export class ChecklistService {
 
     // 4️⃣ RETORNAR RESPOSTA FORMATADA
     return this.toChecklistResponse(checklist);
+  }
+
+  async getChecklistById(id: string): Promise<ChecklistWithQuestionsDto> {
+    // 1️⃣ VALIDAR FORMATO DO ID
+    if (!this.isValidUUID(id)) {
+      throw new AppError("Invalid checklist ID format", 400);
+    }
+
+    // 2️⃣ BUSCAR CHECKLIST POR ID
+    const checklist = await this.checklistRepository.findByIdWithQuestions(id);
+
+    if (!checklist) {
+      throw new AppError("Checklist not found", 404);
+    }
+
+    return this.toChecklistResponsewithQuestions(checklist);
   }
 
   // ========================================
@@ -72,5 +93,35 @@ export class ChecklistService {
       updatedAt: checklist.updatedAt,
       _count: checklist._count,
     };
+  }
+
+  private toChecklistResponsewithQuestions(
+    checklist: Checklist & any
+  ): ChecklistWithQuestionsDto {
+    return {
+      id: checklist.id,
+      name: checklist.name,
+      description: checklist.description,
+      isActive: checklist.isActive,
+      createdAt: checklist.createdAt,
+      updatedAt: checklist.updatedAt,
+      _count: checklist._count,
+      questions: checklist.questions.map((question: Question) => ({
+        id: question.id,
+        description: question.description,
+        type: question.type,
+        isRequired: question.isRequired,
+        order: question.order,
+        isActive: question.isActive,
+        createdAt: question.createdAt,
+        updatedAt: question.updatedAt,
+      })),
+    };
+  }
+
+  private isValidUUID(uuid: string): boolean {
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
   }
 }
