@@ -68,3 +68,16 @@ export interface JwtPayloadDto {
   email: string;
   role: "STUDENT" | "EVALUATOR" | "COORDINATOR"; // ✅ MUDANÇA: Role no token
 }
+
+// DTO para alteração de senha
+export interface ChangePasswordDto {
+  currentPassword?: string; // Opcional para primeiro login
+  newPassword: string;
+  confirmPassword: string;
+}
+
+// ✅ NOVO: DTO para resposta da mudança de senha
+export interface ChangePasswordResponseDto {
+  message: string;
+  wasFirstLogin: boolean; // Para saber se era primeiro login
+}

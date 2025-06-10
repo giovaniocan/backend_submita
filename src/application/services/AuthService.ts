@@ -5,6 +5,8 @@ import {
   LoginDto,
   UserResponseDto,
   AuthResponseDto,
+  ChangePasswordDto,
+  ChangePasswordResponseDto,
 } from "../dtos/AuthDto";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -103,6 +105,50 @@ export class AuthService {
     return this.toUserResponse(user);
   }
 
+  async changePassword(
+    userId: string,
+    passwordData: ChangePasswordDto
+  ): Promise<ChangePasswordResponseDto> {
+    // 1. Validar dados de entrada
+    this.validateChangePasswordData(passwordData);
+
+    // 2. Buscar usuário
+    const user = await this.authRepository.findActiveById(userId);
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+
+    if (!user.isFirstLogin) {
+      if (!passwordData.currentPassword) {
+        throw new AppError("Current password is required", 400);
+      }
+
+      const isCurrentPasswordValid = await bcrypt.compare(
+        passwordData.currentPassword,
+        user.password
+      );
+      if (!isCurrentPasswordValid) {
+        throw new AppError("Current password is incorrect", 400);
+      }
+    }
+
+    // 4. Hash da nova senha
+    const hashedNewPassword = await bcrypt.hash(passwordData.newPassword, 12);
+
+    // 5. Atualizar senha no banco (também marca isFirstLogin = false)
+    await this.authRepository.updatePassword(userId, hashedNewPassword);
+
+    // 6. Retornar resposta adequada
+    const wasFirstLogin = user.isFirstLogin;
+
+    return {
+      message: wasFirstLogin
+        ? "Password set successfully! You can now use the system normally."
+        : "Password changed successfully!",
+      wasFirstLogin,
+    };
+  }
+
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================
@@ -155,5 +201,38 @@ export class AuthService {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
+  }
+
+  private validateChangePasswordData(passwordData: ChangePasswordDto): void {
+    // Validar nova senha
+    if (!passwordData.newPassword || passwordData.newPassword.length < 6) {
+      throw new AppError("New password must have at least 6 characters", 400);
+    }
+
+    // Validar confirmação
+    if (!passwordData.confirmPassword) {
+      throw new AppError("Password confirmation is required", 400);
+    }
+
+    // Verificar se senhas coincidem
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      throw new AppError("New password and confirmation do not match", 400);
+    }
+
+    // Verificar se nova senha é diferente da atual (se fornecida)
+    if (
+      passwordData.currentPassword &&
+      passwordData.currentPassword === passwordData.newPassword
+    ) {
+      throw new AppError(
+        "New password must be different from current password",
+        400
+      );
+    }
+
+    // Validar força da senha (opcional - pode personalizar)
+    if (passwordData.newPassword.length > 50) {
+      throw new AppError("Password cannot exceed 50 characters", 400);
+    }
   }
 }
