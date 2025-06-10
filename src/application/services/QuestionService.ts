@@ -178,8 +178,6 @@ export class QuestionService {
     // 6️⃣ REORGANIZAR ORDERS DAS PERGUNTAS RESTANTES (OPCIONAL)
     await this.questionRepository.reorderQuestions(checklistId);
 
-    console.log(`✅ Service: Pergunta removida e orders reorganizadas`);
-
     // 7️⃣ RETORNAR RESPOSTA FORMATADA
     return this.toQuestionResponse(deletedQuestion);
   }

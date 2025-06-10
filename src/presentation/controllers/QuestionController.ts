@@ -8,6 +8,7 @@ import {
 } from "../../application/dtos/QuestionDto";
 import { ApiResponse } from "../../shared/utils/response";
 import { AppError } from "../../shared/errors/AppError";
+import { sanitizeUuidOrThrow } from "../../shared/utils/uuidSanitazer";
 
 export class QuestionController {
   private questionService: QuestionService;
@@ -164,7 +165,14 @@ export class QuestionController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const { checklistId, questionId } = req.params;
+      const checklistId = sanitizeUuidOrThrow(
+        req.params.checklistId,
+        "Checklist ID"
+      );
+      const questionId = sanitizeUuidOrThrow(
+        req.params.questionId,
+        "Question ID"
+      );
 
       if (!checklistId) {
         res
@@ -179,8 +187,8 @@ export class QuestionController {
       }
 
       const result = await this.questionService.deleteQuestion(
-        checklistId.trim(),
-        questionId.trim()
+        checklistId,
+        questionId
       );
 
       res
