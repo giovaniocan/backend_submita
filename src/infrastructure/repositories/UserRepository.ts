@@ -33,9 +33,6 @@ export class UserRepository {
       ];
     }
 
-    console.log("🔍 BUSCA DE TODOS OS AVALIADORES:");
-    console.log("Filtros:", filters);
-
     // Executar queries em paralelo
     const [evaluators, total] = await Promise.all([
       prisma.user.findMany({
@@ -46,10 +43,6 @@ export class UserRepository {
       }),
       prisma.user.count({ where }),
     ]);
-
-    console.log("🔍 RESULTADO:");
-    console.log("Avaliadores encontrados:", evaluators.length);
-    console.log("Total:", total);
 
     return { evaluators, total };
   }

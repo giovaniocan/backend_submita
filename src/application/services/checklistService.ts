@@ -3,7 +3,7 @@
 import { ChecklistRepository } from "../../infrastructure/repositories/ChecklistRepository";
 import { AppError } from "../../shared/errors/AppError";
 import { CreateChecklistDto, ChecklistResponseDto } from "../dtos/ChecklistDto";
-import { Checklist } from "../../generated/prisma";
+import { Checklist, Question } from "../../generated/prisma";
 
 export class ChecklistService {
   private checklistRepository: ChecklistRepository;
