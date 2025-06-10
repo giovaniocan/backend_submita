@@ -15,6 +15,7 @@ export interface UpdateUserDto {
   email?: string;
   role?: "STUDENT" | "EVALUATOR" | "COORDINATOR"; // ✅ MUDANÇA: Role direta
   isFromBpk?: boolean;
+  isFirstLogin?: boolean;
 }
 
 // DTO para atualização de senha
@@ -31,6 +32,7 @@ export interface UserResponseDto {
   role: "STUDENT" | "EVALUATOR" | "COORDINATOR"; // ✅ MUDANÇA: Role direta
   isActive: boolean;
   isFromBpk: boolean;
+  isFirstLogin?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,6 +44,7 @@ export interface ListUsersDto {
   search?: string;
   isActive?: boolean;
   isFromBpk?: boolean;
+  isFirstLogin?: boolean;
   role?: "STUDENT" | "EVALUATOR" | "COORDINATOR"; // ✅ MUDANÇA: Filtro por role direta
 }
 
@@ -56,6 +59,7 @@ export interface AuthResponseDto {
   user: UserResponseDto;
   token: string;
   expiresIn: string;
+  isFirstLogin: boolean; // ✅ MUDANÇA: Indica se é o primeiro login
 }
 
 // DTO para payload do JWT
@@ -63,4 +67,17 @@ export interface JwtPayloadDto {
   userId: string;
   email: string;
   role: "STUDENT" | "EVALUATOR" | "COORDINATOR"; // ✅ MUDANÇA: Role no token
+}
+
+// DTO para alteração de senha
+export interface ChangePasswordDto {
+  currentPassword?: string; // Opcional para primeiro login
+  newPassword: string;
+  confirmPassword: string;
+}
+
+// ✅ NOVO: DTO para resposta da mudança de senha
+export interface ChangePasswordResponseDto {
+  message: string;
+  wasFirstLogin: boolean; // Para saber se era primeiro login
 }
