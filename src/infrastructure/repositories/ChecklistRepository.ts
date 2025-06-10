@@ -80,6 +80,49 @@ export class ChecklistRepository {
     });
   }
 
+  async findAllWithFilters(
+    isActive?: boolean,
+    search?: string,
+    withQuestions: boolean = false
+  ): Promise<Checklist[]> {
+    const where: any = {};
+    if (isActive !== undefined) {
+      where.isActive = isActive;
+    }
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    const include: any = {};
+
+    if (withQuestions) {
+      include.questions = {
+        where: { isActive: true },
+        orderBy: { order: "asc" },
+        select: {
+          id: true,
+          description: true,
+          type: true,
+          isRequired: true,
+          order: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      };
+    }
+
+    return await prisma.checklist.findMany({
+      where,
+      include,
+      orderBy: { name: "asc" },
+    });
+  }
+
   async findByIdWithQuestions(id: string): Promise<Checklist | null> {
     return await prisma.checklist.findUnique({
       where: { id },

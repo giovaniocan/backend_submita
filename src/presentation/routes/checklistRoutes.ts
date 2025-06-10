@@ -27,7 +27,7 @@ router.post(
 
 // Listar checklists com filtros (todas as roles autenticadas)
 router.get("/", authenticate, requireCoordinator(), async (req, res, next) => {
-  await checklistController.getChecklistWithQuestions(req, res, next);
+  await checklistController.getAllChecklists(req, res, next);
 });
 
 router.get(

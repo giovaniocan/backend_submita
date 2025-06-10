@@ -58,6 +58,29 @@ export class ChecklistService {
     return this.toChecklistResponsewithQuestions(checklist);
   }
 
+  async getAllChecklists(
+    isActive?: boolean,
+    search?: string,
+    withQuestions: boolean = false
+  ): Promise<ChecklistResponseDto[]> {
+    // 1️⃣ BUSCAR CHECKLISTS COM FILTROS
+
+    const checklists = await this.checklistRepository.findAllWithFilters(
+      isActive,
+      search,
+      withQuestions
+    );
+
+    if (withQuestions) {
+      return checklists.map((checklist: Checklist) =>
+        this.toChecklistResponsewithQuestions(checklist)
+      );
+    } else {
+      return checklists.map((checklist: Checklist) =>
+        this.toChecklistResponse(checklist)
+      );
+    }
+  }
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================

@@ -92,6 +92,35 @@ export class ChecklistController {
     }
   }
 
+  async getAllChecklists(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const isActive = req.query.isActive
+        ? req.query.isActive === "true"
+        : undefined; // Pega o parâmetro isActive da query string
+      const withQuestions = req.query.withQuestions === "true"; // ✅ NOVA FLAG
+      const search = req.query.search as string;
+
+      const checklists = await this.checklistService.getAllChecklists(
+        isActive,
+        search,
+        withQuestions
+      );
+
+      // 3️⃣ RETORNAR SUCESSO
+      const message = withQuestions
+        ? `${checklists.length} checklist(s) with questions retrieved successfully!`
+        : `${checklists.length} checklist(s) retrieved successfully!`;
+
+      res.status(200).json(ApiResponse.success(checklists, message));
+    } catch (error) {
+      this.handleError(error, res, "Get checklist with questions error");
+    }
+  }
+
   // ========================================
   // MÉTODO PRIVADO PARA TRATAMENTO DE ERROS
   // ========================================
