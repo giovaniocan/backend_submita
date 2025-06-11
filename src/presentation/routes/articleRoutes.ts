@@ -16,11 +16,20 @@ router.post("/", authenticate, requireStudent(), async (req, res, next) => {
 });
 
 router.post(
-  "/:articleId/assign-evaluators",
+  "/:articleId/evaluators",
   authenticate,
   requireCoordinator(),
   async (req, res, next) => {
     await articleController.assignEvaluatorsToArticle(req, res, next);
+  }
+);
+
+router.delete(
+  "/:articleId/evaluators",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await articleController.removeEvaluatorFromArticle(req, res);
   }
 );
 

@@ -24,6 +24,7 @@ import {
   ArticleVersion,
   RelatedAuthor,
 } from "../../generated/prisma";
+import e from "express";
 
 export class ArticleService {
   private articleRepository: ArticleRepository;
@@ -352,6 +353,56 @@ export class ArticleService {
     } catch (error) {
       console.error("❌ Error updating article:", error);
       throw new AppError("Failed to update article", 500);
+    }
+  }
+
+  async removeEvaluatorFromArticle(
+    articleId: string,
+    userId: string
+  ): Promise<Boolean> {
+    if (!this.isValidUUID(articleId)) {
+      throw new AppError("Invalid article ID format", 400);
+    }
+
+    if (!this.isValidUUID(userId)) {
+      throw new AppError("Invalid evaluator ID format", 400);
+    }
+
+    const assignment = await this.assignmentRepository.findByArticleAndUser(
+      articleId,
+      userId
+    );
+
+    if (!assignment) {
+      throw new AppError("Evaluator not assigned to this article", 404);
+    }
+
+    const article = await this.articleRepository.findById(articleId);
+    if (!article) {
+      throw new AppError("Article not found", 404);
+    }
+
+    if (article.status !== "SUBMITTED") {
+      throw new AppError(
+        "Article must be in SUBMITTED status to remove evaluators",
+        400
+      );
+    }
+
+    try {
+      await this.assignmentRepository.removeByArticleAndUser(
+        articleId,
+        assignment.userId
+      );
+      const evaluatorDeleted =
+        await this.assignmentRepository.findByArticleAndUser(articleId, userId);
+      if (evaluatorDeleted) {
+        throw new AppError("Failed to remove evaluator from article", 500);
+      }
+      return true;
+    } catch (error) {
+      console.error("❌ Error removing evaluator from article:", error);
+      return false;
     }
   }
   // ========================================

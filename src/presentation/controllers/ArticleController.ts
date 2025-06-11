@@ -160,6 +160,33 @@ export class ArticleController {
     }
   }
 
+  async removeEvaluatorFromArticle(req: Request, res: Response): Promise<void> {
+    const { articleId } = req.params;
+    const { userId } = req.body;
+
+    if (!articleId || !userId) {
+      res
+        .status(400)
+        .json(ApiResponse.error("Article ID and evaluator are required", 400));
+      return;
+    }
+
+    try {
+      const result = await this.articleService.removeEvaluatorFromArticle(
+        articleId,
+        userId
+      );
+
+      if (result) {
+        res
+          .status(200)
+          .json(ApiResponse.success(null, "Evaluator removed successfully!"));
+      }
+    } catch (error) {
+      this.handleError(error, res, "Remove evaluators from article error");
+    }
+  }
+
   // ========================================
   // MÉTODO PRIVADO PARA TRATAMENTO DE ERROS
   // ========================================
