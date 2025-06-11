@@ -1,7 +1,10 @@
 // src/presentation/controllers/ArticleController.ts
 
 import { Request, Response, NextFunction } from "express";
-import { CreateArticleDto } from "../../application/dtos/ArticleDto";
+import {
+  CreateArticleDto,
+  UpdateArticleDto,
+} from "../../application/dtos/ArticleDto";
 import { ArticleService } from "../../application/services/ArticleService";
 import { ApiResponse } from "../../shared/utils/response";
 import { AppError } from "../../shared/errors/AppError";
@@ -113,6 +116,47 @@ export class ArticleController {
       res.status(statusCode).json(ApiResponse.success(result, message));
     } catch (error) {
       this.handleError(error, res, "Assign evaluators to article error");
+    }
+  }
+
+  async updateArticle(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    const updateData: UpdateArticleDto = req.body;
+    const { articleId } = req.params;
+    const currentUser = req.user;
+
+    if (!articleId) {
+      res.status(400).json(ApiResponse.error("Article ID is required", 400));
+      return;
+    }
+
+    if (!currentUser) {
+      res.status(401).json(ApiResponse.error("User not authenticated", 401));
+      return;
+    }
+
+    try {
+      const updatedArticle = await this.articleService.updateArticle(
+        articleId,
+        updateData,
+        currentUser.id
+      );
+
+      if (!updatedArticle) {
+        res.status(404).json(ApiResponse.error("Article not found", 404));
+        return;
+      }
+
+      res
+        .status(200)
+        .json(
+          ApiResponse.success(updatedArticle, "Article updated successfully!")
+        );
+    } catch (error) {
+      this.handleError(error, res, "Update article error");
     }
   }
 

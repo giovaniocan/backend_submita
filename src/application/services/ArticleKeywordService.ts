@@ -49,6 +49,19 @@ export class ArticleKeywordService {
     }
   }
 
+  async updateKeywords(articleId: string, keywords: string[]): Promise<void> {
+    await this.keywordRepository.deleteByArticleId(articleId);
+    await this.keywordRepository.createMultiple(articleId, keywords);
+  }
+
+  async deleteAllKeywords(articleId: string): Promise<void> {
+    await this.keywordRepository.deleteByArticleId(articleId);
+  }
+
+  async getKeywordsByArticleId(articleId: string): Promise<ArticleKeyword[]> {
+    return await this.keywordRepository.findByArticleId(articleId);
+  }
+
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================

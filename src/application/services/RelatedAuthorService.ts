@@ -52,6 +52,27 @@ export class RelatedAuthorService {
     }
   }
 
+  async updateRelatedAuthor(
+    articleId: string,
+    relatedAuthors: string[]
+  ): Promise<void> {
+    await this.relatedAuthorRepository.deleteRelatedAllAuthor(articleId);
+    await this.relatedAuthorRepository.createMultiple(
+      articleId,
+      relatedAuthors
+    );
+  }
+
+  async getRelatedAuthorsByArticleId(
+    articleId: string
+  ): Promise<RelatedAuthor[]> {
+    return await this.relatedAuthorRepository.findByArticleId(articleId);
+  }
+
+  async deleteRelatedAllAuthor(articleId: string): Promise<void> {
+    await this.relatedAuthorRepository.deleteRelatedAllAuthor(articleId);
+  }
+
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================

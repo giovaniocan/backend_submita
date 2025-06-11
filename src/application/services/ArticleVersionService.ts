@@ -45,6 +45,28 @@ export class ArticleVersionService {
     }
   }
 
+  async getLastVersionByArticleId(articleId: string): Promise<ArticleVersion> {
+    // Validações
+    if (!this.isValidUUID(articleId)) {
+      throw new AppError("Invalid article ID format", 400);
+    }
+
+    try {
+      const lastVersion = await this.versionRepository.findLatestByArticleId(
+        articleId
+      );
+
+      if (!lastVersion) {
+        throw new AppError("No versions found for this article", 404);
+      }
+
+      return lastVersion;
+    } catch (error) {
+      console.error("❌ Error fetching last version:", error);
+      throw new AppError("Failed to fetch last version", 500);
+    }
+  }
+
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================

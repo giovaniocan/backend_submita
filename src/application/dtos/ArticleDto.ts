@@ -46,3 +46,50 @@ export interface ArticleResponseDto {
     createdAt: Date;
   }>;
 }
+
+export interface UpdateArticleDto {
+  // Dados principais do artigo (opcionais)
+  title?: string;
+  summary?: string;
+  thematicArea?: string;
+
+  // Arrays relacionados (opcionais)
+  keywords?: string[]; // Se fornecido, substitui todas as keywords
+  relatedAuthors?: string[]; // Se fornecido, substitui todos os related authors
+}
+
+export interface UpdateArticleResponseDto {
+  id: string;
+  title: string;
+  summary: string;
+  thematicArea?: string;
+  currentVersion: number;
+  evaluationsDone: number;
+  status:
+    | "SUBMITTED"
+    | "IN_EVALUATION"
+    | "APPROVED"
+    | "APPROVED_WITH_REMARKS"
+    | "REJECTED";
+  eventId: string;
+  userId: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relacionamentos atualizados
+  keywords: Array<{
+    id: string;
+    name: string;
+  }>;
+  relatedAuthors: Array<{
+    id: string;
+    coAuthorName: string;
+  }>;
+  lastVersion: {
+    id: string;
+    version: number;
+    pdfPath: string;
+    createdAt: Date;
+  };
+}

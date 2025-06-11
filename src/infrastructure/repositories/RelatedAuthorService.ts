@@ -96,6 +96,12 @@ export class RelatedAuthorRepository {
     });
   }
 
+  async deleteRelatedAllAuthor(articleId: string): Promise<void> {
+    await prisma.relatedAuthor.deleteMany({
+      where: { articleId },
+    });
+  }
+
   // ========================================
   // UTILITIES
   // ========================================

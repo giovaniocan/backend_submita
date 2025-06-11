@@ -7,13 +7,23 @@ import { ArticleKeywordService } from "./ArticleKeywordService";
 import { RelatedAuthorService } from "./RelatedAuthorService";
 import { ArticleVersionService } from "./ArticleVersionService";
 import { AppError } from "../../shared/errors/AppError";
-import { CreateArticleDto, ArticleResponseDto } from "../dtos/ArticleDto";
+import {
+  CreateArticleDto,
+  ArticleResponseDto,
+  UpdateArticleResponseDto,
+  UpdateArticleDto,
+} from "../dtos/ArticleDto";
 import {
   AssignedEvaluatorDto,
   AssignEvaluatorsResponseDto,
 } from "../dtos/AssignEvaluatorToArticleDto";
 import { EventEvaluatorRepository } from "../../infrastructure/repositories/EventEvaluatorRepository";
 import { ArticleEvaluatorAssignmentRepository } from "../../infrastructure/repositories/ArticleEvaluatorAssignmentRepository";
+import {
+  ArticleKeyword,
+  ArticleVersion,
+  RelatedAuthor,
+} from "../../generated/prisma";
 
 export class ArticleService {
   private articleRepository: ArticleRepository;
@@ -263,6 +273,87 @@ export class ArticleService {
 
     return response;
   }
+
+  async updateArticle(
+    articleId: string,
+    updateData: UpdateArticleDto,
+    userId: string
+  ): Promise<UpdateArticleResponseDto> {
+    if (!this.isValidUUID(articleId)) {
+      throw new AppError("Invalid article ID format", 400);
+    }
+
+    if (!this.isValidUUID(userId)) {
+      throw new AppError("Invalid user ID format", 400);
+    }
+
+    const article = await this.articleRepository.findActiveById(articleId);
+
+    if (article?.userId !== userId) {
+      throw new AppError(
+        "You do not have permission to edit this article",
+        403
+      );
+    }
+
+    if (!this.canEditArticle(article?.status || "")) {
+      throw new AppError(
+        `Article cannot be edited when status is ${article.status}`,
+        400
+      );
+    }
+
+    this.validateUpdateData(updateData);
+
+    try {
+      //Tratar de atualizar os campos principais do artigo
+      if (this.hasMainFieldsToUpdate(updateData)) {
+        const articleUpdateData = {
+          title: updateData.title?.trim(),
+          summary: updateData.summary?.trim(),
+          thematicArea: updateData.thematicArea?.trim(),
+        };
+
+        Object.keys(articleUpdateData).forEach((key) => {
+          const typedKey = key as keyof typeof articleUpdateData;
+          if (articleUpdateData[typedKey] === undefined) {
+            delete articleUpdateData[typedKey];
+          }
+        });
+
+        await this.articleRepository.update(articleId, articleUpdateData);
+      }
+
+      // Atualizar palavras-chave
+      if (updateData.keywords !== undefined) {
+        if (updateData.keywords.length > 0) {
+          await this.keywordService.updateKeywords(
+            articleId,
+            updateData.keywords
+          );
+        } else {
+          await this.keywordService.deleteAllKeywords(articleId);
+        }
+      }
+
+      // Atualizar co-autores
+      if (updateData.relatedAuthors !== undefined) {
+        if (updateData.relatedAuthors.length > 0) {
+          await this.relatedAuthorService.updateRelatedAuthor(
+            articleId,
+            updateData.relatedAuthors
+          );
+        } else {
+          await this.relatedAuthorService.deleteRelatedAllAuthor(articleId);
+        }
+      }
+
+      return await this.getFullArticleForUpdate(articleId);
+    } catch (error) {
+      console.error("❌ Error updating article:", error);
+      throw new AppError("Failed to update article", 500);
+    }
+  }
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================
@@ -331,6 +422,11 @@ export class ArticleService {
     }
   }
 
+  private canEditArticle(status: string): boolean {
+    // Artigo só pode ser editado se estiver SUBMITTED ou APPROVED_WITH_REMARKS
+    return status === "SUBMITTED" || status === "APPROVED_WITH_REMARKS";
+  }
+
   private getMaxEvaluatorsByType(evaluationType: string): number {
     switch (evaluationType) {
       case "DIRECT":
@@ -342,6 +438,123 @@ export class ArticleService {
       default:
         return 1;
     }
+  }
+
+  private validateUpdateData(updateData: UpdateArticleDto): void {
+    // Validar título se fornecido
+    if (updateData.title !== undefined) {
+      if (!updateData.title || updateData.title.trim().length < 3) {
+        throw new AppError("Title must have at least 3 characters", 400);
+      }
+      if (updateData.title.length > 150) {
+        throw new AppError("Title cannot exceed 150 characters", 400);
+      }
+    }
+
+    // Validar resumo se fornecido
+    if (updateData.summary !== undefined) {
+      if (!updateData.summary || updateData.summary.trim().length < 10) {
+        throw new AppError("Summary must have at least 10 characters", 400);
+      }
+      if (updateData.summary.length > 300) {
+        throw new AppError("Summary cannot exceed 300 characters", 400);
+      }
+    }
+
+    // Validar área temática se fornecida
+    if (
+      updateData.thematicArea !== undefined &&
+      updateData.thematicArea.length > 150
+    ) {
+      throw new AppError("Thematic area cannot exceed 150 characters", 400);
+    }
+
+    // Validar keywords se fornecidas
+    if (updateData.keywords !== undefined) {
+      if (updateData.keywords.length > 10) {
+        throw new AppError("Maximum 10 keywords allowed", 400);
+      }
+      for (const keyword of updateData.keywords) {
+        if (!keyword || keyword.trim().length === 0) {
+          throw new AppError("Keywords cannot be empty", 400);
+        }
+        if (keyword.length > 45) {
+          throw new AppError("Keywords cannot exceed 45 characters", 400);
+        }
+      }
+    }
+
+    // Validar related authors se fornecidos
+    if (updateData.relatedAuthors !== undefined) {
+      if (updateData.relatedAuthors.length > 20) {
+        throw new AppError("Maximum 20 related authors allowed", 400);
+      }
+      for (const author of updateData.relatedAuthors) {
+        if (!author || author.trim().length === 0) {
+          throw new AppError("Related author names cannot be empty", 400);
+        }
+        if (author.length > 100) {
+          throw new AppError(
+            "Related author names cannot exceed 100 characters",
+            400
+          );
+        }
+      }
+    }
+  }
+
+  private hasMainFieldsToUpdate(updateData: UpdateArticleDto): boolean {
+    return !!(
+      updateData.title ||
+      updateData.summary ||
+      updateData.thematicArea
+    );
+  }
+
+  private async getFullArticleForUpdate(
+    articleId: string
+  ): Promise<UpdateArticleResponseDto> {
+    const article = await this.articleRepository.findById(articleId);
+    if (!article) {
+      throw new AppError("Article not found", 404);
+    }
+    const keywords = await this.keywordService.getKeywordsByArticleId(
+      articleId
+    );
+    const relatedAuthors =
+      await this.relatedAuthorService.getRelatedAuthorsByArticleId(articleId);
+    const lastVersion = await this.versionService.getLastVersionByArticleId(
+      articleId
+    );
+
+    return {
+      id: article.id,
+      title: article.title,
+      summary: article.summary,
+      thematicArea: article.thematicArea ?? undefined,
+      currentVersion: article.currentVersion,
+      evaluationsDone: article.evaluationsDone,
+      status: article.status,
+      eventId: article.eventId,
+      userId: article.userId,
+      isActive: article.isActive,
+      createdAt: article.createdAt,
+      updatedAt: article.updatedAt,
+      keywords: keywords.map((k: ArticleKeyword) => ({
+        id: k.id,
+        name: k.name,
+      })),
+      relatedAuthors: relatedAuthors.map((ra: RelatedAuthor) => ({
+        id: ra.id,
+        coAuthorName: ra.coAuthorName,
+      })),
+      lastVersion: {
+        id: lastVersion.id,
+        version: lastVersion.version,
+        pdfPath: lastVersion.pdfPath,
+        createdAt: lastVersion.createdAt,
+      },
+    };
   }
 
   private isValidUUID(uuid: string): boolean {

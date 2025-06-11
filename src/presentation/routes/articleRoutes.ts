@@ -24,4 +24,13 @@ router.post(
   }
 );
 
+router.put(
+  "/:articleId",
+  authenticate,
+  requireStudent(), // ou requireStudent() dependendo da regra
+  async (req, res, next) => {
+    await articleController.updateArticle(req, res, next);
+  }
+);
+
 export { router as articleRoutes };
