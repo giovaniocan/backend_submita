@@ -26,11 +26,13 @@ export class EmailService {
     // Verificar se as variáveis de ambiente estão configuradas
     const requiredEnvVars = ["EMAIL_USER", "EMAIL_PASS", "EMAIL_FROM_ADDRESS"];
 
+    /*
     for (const envVar of requiredEnvVars) {
       if (!process.env[envVar]) {
         throw new AppError(`Environment variable ${envVar} is required`, 500);
       }
     }
+      */
 
     this.transporter = nodemailer.createTransport({
       service: process.env.EMAIL_SERVICE || "gmail",
