@@ -234,107 +234,57 @@ export class EmailService {
     return { subject, html, text };
   }
 
-  // Template para artigo avaliado (resultado para aluno)
-  generateArticleEvaluatedTemplate(
+  // Template para artigo corrigido (SEM REVELAR O RESULTADO)
+  generateArticleReviewedTemplate(
     authorName: string,
     articleTitle: string,
-    eventName: string,
-    status: "APPROVED" | "APPROVED_WITH_REMARKS" | "REJECTED",
-    averageGrade?: number,
-    hasComments: boolean = false
+    eventName: string
   ): EmailTemplate {
-    const statusMessages = {
-      APPROVED: {
-        emoji: "🎉",
-        title: "Artigo Aprovado",
-        message:
-          "Parabéns! Seu artigo foi aprovado sem necessidade de correções.",
-        color: "#28a745",
-      },
-      APPROVED_WITH_REMARKS: {
-        emoji: "⚠️",
-        title: "Artigo Aprovado com Ressalvas",
-        message: "Seu artigo foi aprovado, mas requer algumas correções.",
-        color: "#ffc107",
-      },
-      REJECTED: {
-        emoji: "❌",
-        title: "Artigo Não Aprovado",
-        message: "Infelizmente seu artigo não foi aprovado nesta revisão.",
-        color: "#dc3545",
-      },
-    };
-
-    const statusInfo = statusMessages[status];
-    const subject = `${statusInfo.emoji} ${statusInfo.title} - ${articleTitle}`;
+    const subject = `📝 Seu artigo foi corrigido - ${articleTitle}`;
 
     const html = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Resultado da Avaliação</title>
+        <title>Artigo Corrigido</title>
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: ${
-            statusInfo.color
-          }; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+          .header { background: #007bff; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
           .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 5px 5px; }
           .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-          .btn { background: ${
-            statusInfo.color
-          }; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0; }
-          .result-box { background: white; border-left: 4px solid ${
-            statusInfo.color
-          }; padding: 15px; margin: 15px 0; }
+          .btn { background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0; }
+          .info-box { background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin: 15px 0; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1>${statusInfo.emoji} ${statusInfo.title}</h1>
+            <h1>📝 Artigo Corrigido</h1>
           </div>
           <div class="content">
             <h2>Olá, ${authorName}!</h2>
-            <div class="result-box">
-              <p><strong>${statusInfo.message}</strong></p>
+            <div class="info-box">
+              <p><strong>Seu artigo foi corrigido e a avaliação está disponível!</strong></p>
             </div>
-            <p><strong>Detalhes da avaliação:</strong></p>
+            <p><strong>Detalhes:</strong></p>
             <ul>
               <li><strong>Artigo:</strong> ${articleTitle}</li>
               <li><strong>Evento:</strong> ${eventName}</li>
-              <li><strong>Status:</strong> ${statusInfo.title}</li>
-              ${
-                averageGrade
-                  ? `<li><strong>Nota média:</strong> ${averageGrade.toFixed(
-                      1
-                    )}/10</li>`
-                  : ""
-              }
+              <li><strong>Status:</strong> Avaliação concluída</li>
             </ul>
-            ${
-              hasComments
-                ? "<p>Os avaliadores deixaram comentários detalhados para você. Acesse a plataforma para visualizar.</p>"
-                : ""
-            }
+            <p>A avaliação do seu artigo foi finalizada. Para conhecer o resultado e visualizar os comentários dos avaliadores, acesse a plataforma.</p>
             <p style="text-align: center;">
-              <a href="${
-                process.env.FRONTEND_URL
-              }/dashboard" class="btn">Ver Avaliação Completa</a>
+              <a href="${process.env.FRONTEND_URL}/dashboard" class="btn">Ver Resultado da Avaliação</a>
             </p>
-            ${
-              status === "APPROVED_WITH_REMARKS"
-                ? `
-            <p><strong>⚠️ Ação necessária:</strong></p>
+            <p><strong>Próximos passos:</strong></p>
             <ul>
-              <li>Revise os comentários dos avaliadores</li>
-              <li>Faça as correções solicitadas</li>
-              <li>Submeta uma nova versão se necessário</li>
+              <li>Acesse sua conta na plataforma</li>
+              <li>Visualize o resultado da avaliação</li>
+              <li>Leia os comentários dos avaliadores</li>
+              <li>Siga as orientações conforme o resultado</li>
             </ul>
-            `
-                : ""
-            }
           </div>
           <div class="footer">
             <p>Este é um email automático. Não responda.</p>
@@ -347,17 +297,20 @@ export class EmailService {
     const text = `
       Olá, ${authorName}!
 
-      ${statusInfo.message}
+      Seu artigo foi corrigido e a avaliação está disponível!
 
       Detalhes:
       - Artigo: ${articleTitle}
       - Evento: ${eventName}
-      - Status: ${statusInfo.title}
-      ${averageGrade ? `- Nota média: ${averageGrade.toFixed(1)}/10` : ""}
+      - Status: Avaliação concluída
 
-      ${hasComments ? "Os avaliadores deixaram comentários para você." : ""}
+      Acesse a plataforma para ver o resultado: ${process.env.FRONTEND_URL}/dashboard
 
-      Acesse a plataforma: ${process.env.FRONTEND_URL}/dashboard
+      Próximos passos:
+      - Acesse sua conta na plataforma
+      - Visualize o resultado da avaliação
+      - Leia os comentários dos avaliadores
+      - Siga as orientações conforme o resultado
 
       Sistema SUBMITA
     `;
@@ -409,22 +362,16 @@ export class EmailService {
     });
   }
 
-  async sendArticleEvaluatedEmail(
+  async sendArticleReviewedEmail(
     authorEmail: string,
     authorName: string,
     articleTitle: string,
-    eventName: string,
-    status: "APPROVED" | "APPROVED_WITH_REMARKS" | "REJECTED",
-    averageGrade?: number,
-    hasComments: boolean = false
+    eventName: string
   ): Promise<void> {
-    const template = this.generateArticleEvaluatedTemplate(
+    const template = this.generateArticleReviewedTemplate(
       authorName,
       articleTitle,
-      eventName,
-      status,
-      averageGrade,
-      hasComments
+      eventName
     );
 
     await this.sendEmail({

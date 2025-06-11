@@ -92,39 +92,12 @@ router.post(
           );
           break;
 
-        case "article_approved":
-          await emailService.sendArticleEvaluatedEmail(
+        case "article_evaluated":
+          await emailService.sendArticleReviewedEmail(
             to,
             testData.authorName,
             testData.articleTitle,
-            testData.eventName,
-            "APPROVED",
-            8.5,
-            true
-          );
-          break;
-
-        case "article_approved_with_remarks":
-          await emailService.sendArticleEvaluatedEmail(
-            to,
-            testData.authorName,
-            testData.articleTitle,
-            testData.eventName,
-            "APPROVED_WITH_REMARKS",
-            7.2,
-            true
-          );
-          break;
-
-        case "article_rejected":
-          await emailService.sendArticleEvaluatedEmail(
-            to,
-            testData.authorName,
-            testData.articleTitle,
-            testData.eventName,
-            "REJECTED",
-            3.8,
-            true
+            testData.eventName
           );
           break;
 
@@ -167,19 +140,9 @@ router.get("/types", authenticate, requireCoordinator(), async (req, res) => {
       description: "Confirma submissão de artigo para o autor",
     },
     {
-      type: "article_approved",
-      name: "Artigo Aprovado",
-      description: "Notifica autor sobre aprovação do artigo",
-    },
-    {
-      type: "article_approved_with_remarks",
-      name: "Artigo Aprovado com Ressalvas",
-      description: "Notifica autor sobre aprovação com correções necessárias",
-    },
-    {
-      type: "article_rejected",
-      name: "Artigo Rejeitado",
-      description: "Notifica autor sobre rejeição do artigo",
+      type: "article_evaluated",
+      name: "Artigo Avaliado",
+      description: "Notifica o autor sobre a avaliação do artigo",
     },
   ];
 
