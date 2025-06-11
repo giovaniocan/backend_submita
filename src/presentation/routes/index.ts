@@ -5,6 +5,7 @@ import { eventRoutes } from "./eventRoutes";
 import { userRoutes } from "./userRoutes";
 import { checklistRoutes } from "./checklistRoutes";
 import { fileUploadRoutes } from "./fileUploadRoutes";
+import { testEmailRoutes } from "./testEmailRoutes";
 
 const router = Router();
 
@@ -14,6 +15,9 @@ router.use("/users", userRoutes);
 
 // Rotas de upload de arquivos
 router.use("/files", fileUploadRoutes);
-router.use("/checklists", checklistRoutes); // ✅ MUDANÇA: /checklists (sem authenticate aqui)
+router.use("/checklists", checklistRoutes);
+
+// Rota de teste de email
+router.use("/email", testEmailRoutes);
 
 export { router as appRoutes };

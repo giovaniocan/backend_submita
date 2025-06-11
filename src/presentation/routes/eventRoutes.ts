@@ -7,6 +7,7 @@ import {
   requireStaff,
 } from "../middlewares/authMiddleware";
 import { EventEvaluatorController } from "../controllers/EventEvaluatorController";
+import { notifyEvaluatorAdded } from "../middlewares/emailNotificationMiddleware";
 
 const router = Router();
 const eventController = new EventController();
@@ -88,6 +89,7 @@ router.post(
   "/:eventId/evaluators",
   authenticate,
   requireCoordinator(),
+  notifyEvaluatorAdded(),
   async (req, res, next) => {
     await eventEvaluatorController.addEvaluatorsToEvent(req, res, next);
   }
