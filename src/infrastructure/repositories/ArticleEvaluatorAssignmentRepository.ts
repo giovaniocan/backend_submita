@@ -152,6 +152,21 @@ export class ArticleEvaluatorAssignmentRepository {
     });
   }
 
+  async resetAssignmentsByArticle(articleId: string): Promise<void> {
+    const assignments = await this.findByArticleId(articleId);
+
+    if (assignments.length === 0) {
+      throw new Error("No assignments found for this article");
+    }
+
+    for (const assignment of assignments) {
+      await prisma.articleEvaluatorAssignment.update({
+        where: { id: assignment.id },
+        data: { isCorrected: false, assignedAt: new Date() },
+      });
+    }
+  }
+
   // ========================================
   // DELETE
   // ========================================

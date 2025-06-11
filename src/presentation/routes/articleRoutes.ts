@@ -33,6 +33,17 @@ router.delete(
   }
 );
 
+// Inserir uma nova versão do artigo
+router.put(
+  "/:articleId/new-version",
+  authenticate,
+  requireStudent(),
+  async (req, res, next) => {
+    await articleController.createNewVersion(req, res, next);
+  }
+);
+
+// Atualizar artigos (informações)
 router.put(
   "/:articleId",
   authenticate,

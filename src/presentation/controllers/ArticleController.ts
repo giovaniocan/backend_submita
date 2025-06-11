@@ -8,12 +8,16 @@ import {
 import { ArticleService } from "../../application/services/ArticleService";
 import { ApiResponse } from "../../shared/utils/response";
 import { AppError } from "../../shared/errors/AppError";
+import { CreateNewVersionDto } from "../../application/dtos/ArticleVersionDto";
+import { ArticleVersionService } from "../../application/services/ArticleVersionService";
 
 export class ArticleController {
   private articleService: ArticleService;
+  private articleVersionService: ArticleVersionService; // Assuming this is the service for handling article versions
 
   constructor() {
     this.articleService = new ArticleService();
+    this.articleVersionService = new ArticleVersionService();
   }
 
   async createArticle(
@@ -184,6 +188,49 @@ export class ArticleController {
       }
     } catch (error) {
       this.handleError(error, res, "Remove evaluators from article error");
+    }
+  }
+
+  async createNewVersion(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { articleId } = req.params;
+      const versionData: CreateNewVersionDto = req.body;
+      const currentUser = req.user;
+
+      // Validações básicas
+      if (!articleId) {
+        res.status(400).json(ApiResponse.error("Article ID is required", 400));
+        return;
+      }
+
+      if (!currentUser) {
+        res.status(401).json(ApiResponse.error("User not authenticated", 401));
+        return;
+      }
+
+      if (!versionData.pdfPath || versionData.pdfPath.trim().length === 0) {
+        res.status(400).json(ApiResponse.error("PDF path is required", 400));
+        return;
+      }
+
+      const result = await this.articleVersionService.createNewVersion(
+        articleId,
+        {
+          articleId: articleId,
+          pdfPath: versionData.pdfPath.trim(),
+        },
+        currentUser.id
+      );
+
+      res
+        .status(201)
+        .json(ApiResponse.success(result, "New version created successfully!"));
+    } catch (error) {
+      this.handleError(error, res, "Create new version error");
     }
   }
 
