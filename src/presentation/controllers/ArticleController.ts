@@ -67,6 +67,55 @@ export class ArticleController {
     }
   }
 
+  async assignEvaluatorsToArticle(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { articleId } = req.params;
+      const { evaluators } = req.body;
+
+      if (!articleId || !evaluators || !Array.isArray(evaluators)) {
+        res
+          .status(400)
+          .json(
+            ApiResponse.error("Article ID and evaluators are required", 400)
+          );
+        return;
+      }
+
+      if (evaluators.length === 0) {
+        res
+          .status(400)
+          .json(ApiResponse.error("At least one evaluator is required", 400));
+        return;
+      }
+
+      const result = await this.articleService.assignEvaluatorsToArticle(
+        articleId,
+        evaluators
+      );
+
+      // Determinar status code baseado no resultado
+      const statusCode = result.summary.totalAssigned > 0 ? 201 : 400;
+
+      // Mensagem personalizada
+      let message = "";
+      if (result.summary.totalAssigned === result.summary.totalRequested) {
+        message = `All ${result.summary.totalAssigned} evaluator(s) assigned successfully!`;
+      } else if (result.summary.totalAssigned > 0) {
+        message = `${result.summary.totalAssigned} of ${result.summary.totalRequested} evaluator(s) assigned successfully!`;
+      } else {
+        message = "No evaluators were assigned";
+      }
+
+      res.status(statusCode).json(ApiResponse.success(result, message));
+    } catch (error) {
+      this.handleError(error, res, "Assign evaluators to article error");
+    }
+  }
+
   // ========================================
   // MÉTODO PRIVADO PARA TRATAMENTO DE ERROS
   // ========================================

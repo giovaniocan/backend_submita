@@ -1,5 +1,5 @@
 import { ListEventEvaluatorsDto } from "../../application/dtos/EventEvaluatorDto";
-import { EventEvaluator, Prisma } from "../../generated/prisma";
+import { EventEvaluator, Prisma, User } from "../../generated/prisma";
 import { prisma } from "../../lib/prisma";
 
 export class EventEvaluatorRepository {
@@ -33,17 +33,28 @@ export class EventEvaluatorRepository {
     });
   }
 
-  async findByEventAndUser(eventId: string, userId: string): Promise<Boolean> {
-    const user = await prisma.eventEvaluator.findUnique({
+  async findByEventAndUser(
+    eventId: string,
+    userId: string
+  ): Promise<EventEvaluator | null> {
+    return await prisma.eventEvaluator.findUnique({
       where: {
         eventId_userId: {
           eventId,
           userId,
         },
       },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
     });
-
-    return !!user;
   }
 
   async findManyWithPagination(

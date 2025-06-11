@@ -8,6 +8,12 @@ import { RelatedAuthorService } from "./RelatedAuthorService";
 import { ArticleVersionService } from "./ArticleVersionService";
 import { AppError } from "../../shared/errors/AppError";
 import { CreateArticleDto, ArticleResponseDto } from "../dtos/ArticleDto";
+import {
+  AssignedEvaluatorDto,
+  AssignEvaluatorsResponseDto,
+} from "../dtos/AssignEvaluatorToArticleDto";
+import { EventEvaluatorRepository } from "../../infrastructure/repositories/EventEvaluatorRepository";
+import { ArticleEvaluatorAssignmentRepository } from "../../infrastructure/repositories/ArticleEvaluatorAssignmentRepository";
 
 export class ArticleService {
   private articleRepository: ArticleRepository;
@@ -16,6 +22,8 @@ export class ArticleService {
   private keywordService: ArticleKeywordService;
   private relatedAuthorService: RelatedAuthorService;
   private versionService: ArticleVersionService;
+  private eventEvaluatorRepository: EventEvaluatorRepository;
+  private assignmentRepository: ArticleEvaluatorAssignmentRepository;
 
   constructor() {
     this.articleRepository = new ArticleRepository();
@@ -24,6 +32,8 @@ export class ArticleService {
     this.keywordService = new ArticleKeywordService();
     this.relatedAuthorService = new RelatedAuthorService();
     this.versionService = new ArticleVersionService();
+    this.eventEvaluatorRepository = new EventEvaluatorRepository();
+    this.assignmentRepository = new ArticleEvaluatorAssignmentRepository();
   }
 
   // ========================================
@@ -130,6 +140,129 @@ export class ArticleService {
     }
   }
 
+  async assignEvaluatorsToArticle(
+    articleId: string,
+    evaluatorIds: string[]
+  ): Promise<AssignEvaluatorsResponseDto> {
+    const article = await this.articleRepository.findById(articleId);
+    if (!article) {
+      throw new AppError("Article not found", 404);
+    }
+
+    if (article.status !== "SUBMITTED") {
+      throw new AppError(
+        "Article must be in SUBMITTED status to assign evaluators",
+        400
+      );
+    }
+
+    if (!Array.isArray(evaluatorIds) || evaluatorIds.length === 0) {
+      throw new AppError("Evaluators must be a non-empty array", 400);
+    }
+
+    const event = await this.eventRepository.findActiveById(article.eventId);
+    if (!event) {
+      throw new AppError("Event not found or inactive", 404);
+    }
+
+    const maxEvaluators = this.getMaxEvaluatorsByType(event.evaluationType);
+
+    const currentAssignments = await this.assignmentRepository.countByArticleId(
+      articleId
+    );
+    const remainingSlots = maxEvaluators - currentAssignments;
+
+    if (remainingSlots <= 0) {
+      throw new AppError(
+        `Article already has maximum evaluators for ${event.evaluationType} evaluation (${maxEvaluators})`,
+        400
+      );
+    }
+
+    const requestedIds = evaluatorIds.slice(0, remainingSlots);
+
+    if (requestedIds.length < evaluatorIds.length) {
+      console.warn(
+        `Only ${remainingSlots} slots available, limiting assignment`
+      );
+    }
+
+    // 7️⃣ PROCESSAR CADA AVALIADOR
+    const assigned: AssignedEvaluatorDto[] = [];
+    const skipped: string[] = [];
+    const errors: string[] = [];
+
+    for (const evaluatorId of requestedIds) {
+      if (!this.isValidUUID(evaluatorId)) {
+        errors.push(`Invalid evaluator ID format: ${evaluatorId}`);
+        continue;
+      }
+
+      try {
+        // Verificar se o avaliador está no evento
+        const eventEvaluator =
+          await this.eventEvaluatorRepository.findByEventAndUser(
+            article.eventId,
+            evaluatorId
+          );
+
+        if (!eventEvaluator || !eventEvaluator.isActive) {
+          errors.push(`Evaluator ${evaluatorId} not found in this event`);
+          continue;
+        }
+
+        // Verificar se já está atribuído
+        const existingAssignment =
+          await this.assignmentRepository.findByArticleAndUser(
+            articleId,
+            evaluatorId
+          );
+
+        if (existingAssignment) {
+          skipped.push(evaluatorId);
+          continue;
+        }
+
+        // Criar atribuição
+        const newAssignment = await this.assignmentRepository.create({
+          eventEvaluatorId: eventEvaluator.id,
+          articleId,
+          userId: evaluatorId,
+        });
+
+        assigned.push({
+          id: newAssignment.id,
+          eventEvaluatorId: newAssignment.eventEvaluatorId,
+          articleId: newAssignment.articleId,
+          userId: newAssignment.userId,
+          isCorrected: newAssignment.isCorrected,
+          assignedAt: newAssignment.assignedAt,
+        });
+      } catch (error) {
+        console.error(`Error assigning evaluator ${evaluatorId}:`, error);
+        errors.push(`Error assigning evaluator ${evaluatorId}`);
+      }
+    }
+
+    // Always return a response at the end
+    const response: AssignEvaluatorsResponseDto = {
+      articleId,
+      eventId: article.eventId,
+      evaluationType: event.evaluationType,
+      maxEvaluators,
+      assignedEvaluators: assigned,
+      summary: {
+        totalRequested: evaluatorIds.length,
+        totalAssigned: assigned.length,
+        totalSkipped: skipped.length,
+        totalErrors: errors.length,
+      },
+      skipped,
+      errors,
+    };
+
+    return response;
+  }
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================
@@ -195,6 +328,19 @@ export class ArticleService {
           400
         );
       }
+    }
+  }
+
+  private getMaxEvaluatorsByType(evaluationType: string): number {
+    switch (evaluationType) {
+      case "DIRECT":
+        return 1;
+      case "PAIR":
+        return 2;
+      case "PANEL":
+        return 5; // Você pode ajustar este número
+      default:
+        return 1;
     }
   }
 
