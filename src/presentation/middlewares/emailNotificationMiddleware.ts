@@ -111,11 +111,7 @@ export class EmailNotificationMiddleware {
             article.title &&
             article.status
           ) {
-            const finalStatuses = [
-              "APPROVED",
-              "APPROVED_WITH_REMARKS",
-              "REJECTED",
-            ];
+            const finalStatuses = ["APPROVED", "IN_CORRECTION", "REJECTED"];
 
             if (finalStatuses.includes(article.status)) {
               setImmediate(async () => {

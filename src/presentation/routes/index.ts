@@ -7,6 +7,7 @@ import { checklistRoutes } from "./checklistRoutes";
 import { fileUploadRoutes } from "./fileUploadRoutes";
 import { testEmailRoutes } from "./testEmailRoutes";
 import { articleRoutes } from "./articleRoutes";
+import { evaluationRoutes } from "./evaluationRoutes";
 
 const router = Router();
 
@@ -18,6 +19,8 @@ router.use("/articles", articleRoutes);
 // Rotas de upload de arquivos
 router.use("/files", fileUploadRoutes);
 router.use("/checklists", checklistRoutes);
+
+router.use("/evaluations", evaluationRoutes);
 
 // Rota de teste de email
 router.use("/email", testEmailRoutes);

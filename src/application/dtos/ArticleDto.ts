@@ -22,7 +22,7 @@ export interface ArticleResponseDto {
     | "SUBMITTED"
     | "IN_EVALUATION"
     | "APPROVED"
-    | "APPROVED_WITH_REMARKS"
+    | "IN_CORRECTION"
     | "REJECTED";
   eventId: string;
   userId: string;
@@ -69,7 +69,7 @@ export interface UpdateArticleResponseDto {
     | "SUBMITTED"
     | "IN_EVALUATION"
     | "APPROVED"
-    | "APPROVED_WITH_REMARKS"
+    | "IN_CORRECTION"
     | "REJECTED";
   eventId: string;
   userId: string;

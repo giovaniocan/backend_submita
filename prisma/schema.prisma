@@ -16,10 +16,17 @@ enum ArticleStatus {
   SUBMITTED      // Submetido
   IN_EVALUATION  // Em Avaliação
   APPROVED       // Aprovado
-  APPROVED_WITH_REMARKS // Aprovado com Ressalvas
+  IN_CORRECTION // Aprovado com Ressalvas
   REJECTED       // Reprovado
 
   @@map("article_status")
+}
+
+enum EvaluationStatus {
+  APPROVED
+  TO_CORRECTION
+  REJECTED
+  @@map("evaluation_status")
 }
 
 enum EventStatus {
@@ -209,6 +216,7 @@ model Evaluation {
   evaluationDescription String? @map("evaluation_description") @db.Text
   evaluationDate     DateTime @map("evaluation_date")
   userId             String   @map("user_id") @db.Uuid
+  status            EvaluationStatus @default(TO_CORRECTION) // Status do artigo após avaliação
   articleVersionId   String   @map("article_version_id") @db.Uuid
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
