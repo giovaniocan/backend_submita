@@ -270,8 +270,6 @@ export class EventController {
     next: NextFunction
   ): Promise<void> {
     try {
-      console.log("CHEGOU AQUI NA CONTROLLER DE EVENTO");
-
       const eventId = req.params.eventId;
 
       const result = await this.eventService.removeChecklistFromEvent(eventId);
