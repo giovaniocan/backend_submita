@@ -137,9 +137,17 @@ export class ArticleEvaluatorAssignmentRepository {
   }
 
   // Marcar como corrigido
-  async markAsCorrected(id: string): Promise<ArticleEvaluatorAssignment> {
+  async markAsCorrected(
+    articleId: string,
+    eventEvaluatorId: string
+  ): Promise<ArticleEvaluatorAssignment> {
     return await prisma.articleEvaluatorAssignment.update({
-      where: { id },
+      where: {
+        eventEvaluatorId_articleId: {
+          articleId,
+          eventEvaluatorId,
+        },
+      },
       data: { isCorrected: true },
     });
   }

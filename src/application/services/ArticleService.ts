@@ -475,7 +475,7 @@ export class ArticleService {
 
   private canEditArticle(status: string): boolean {
     // Artigo só pode ser editado se estiver SUBMITTED ou APPROVED_WITH_REMARKS
-    return status === "SUBMITTED" || status === "APPROVED_WITH_REMARKS";
+    return status === "SUBMITTED" || status === "IN_CORRECTION";
   }
 
   private getMaxEvaluatorsByType(evaluationType: string): number {

@@ -14,7 +14,7 @@ interface CreateArticleData {
     | "SUBMITTED"
     | "IN_EVALUATION"
     | "APPROVED"
-    | "APPROVED_WITH_REMARKS"
+    | "IN_CORRECTION"
     | "REJECTED";
 }
 
@@ -71,6 +71,20 @@ export class ArticleRepository {
     });
   }
 
+  async incrementEvaluationsDone(id: string): Promise<Article> {
+    const article = await this.findById(id);
+
+    if (!article) {
+      throw new Error("Article not found");
+    }
+
+    const newEvaluationsDone = (article.evaluationsDone || 0) + 1;
+
+    return await prisma.article.update({
+      where: { id },
+      data: { evaluationsDone: newEvaluationsDone },
+    });
+  }
   // Hard delete
   async hardDelete(id: string): Promise<Article> {
     return await prisma.article.delete({
