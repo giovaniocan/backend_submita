@@ -54,16 +54,24 @@ export class EvaluationController {
         return;
       }
 
+      const validStatuses = ["APPROVED", "TO_CORRECTION", "REJECTED"];
+      if (!validStatuses.includes(status?.trim())) {
+        res
+          .status(400)
+          .json(
+            ApiResponse.error(
+              "Invalid evaluation status. Must be: APPROVED, TO_CORRECTION, or REJECTED",
+              400
+            )
+          );
+        return;
+      }
+
       const evaluationData: CreateEvaluationDto = {
         grade: Number(grade), // Garantir que é número
         evaluationDescription: evaluationDescription?.trim() || undefined,
         articleVersionId: articleVersionId.trim(),
-        status:
-          status?.trim() === "TO_CORRECTION" ||
-          status?.trim() === "APPROVED" ||
-          status?.trim() === "REJECTED"
-            ? (status.trim() as "TO_CORRECTION" | "APPROVED" | "REJECTED")
-            : "TO_CORRECTION", // Valor padrão se não fornecido ou inválido
+        status: status,
       };
 
       // 5️⃣ CHAMAR O SERVICE (passa o userId do token)

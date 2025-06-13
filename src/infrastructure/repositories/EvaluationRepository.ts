@@ -1,5 +1,5 @@
 import { CreateEvaluationDto } from "../../application/dtos/EvaluationDto";
-import { Evaluation } from "../../generated/prisma";
+import { Evaluation, EvaluationStatus } from "../../generated/prisma";
 import { prisma } from "../../lib/prisma";
 
 export class EvaluationRepository {
@@ -11,10 +11,12 @@ export class EvaluationRepository {
     evaluationDate: Date;
     userId: string;
     articleVersionId: string;
+    evaluationStatus: string;
   }): Promise<any> {
     return await prisma.evaluation.create({
       data: {
         grade: data.grade,
+        status: data.evaluationStatus as EvaluationStatus,
         evaluationDescription: data.evaluationDescription,
         evaluationDate: data.evaluationDate,
         userId: data.userId,
@@ -26,6 +28,10 @@ export class EvaluationRepository {
   async getEvaluationsByArticleVersionId(
     articleVersionId: string
   ): Promise<Evaluation[]> {
+    console.log(
+      "Fetching evaluations for article version ID:",
+      articleVersionId
+    );
     const evaluation = await prisma.evaluation.findMany({
       where: { articleVersionId },
       orderBy: { createdAt: "desc" }, // Ordenar por data de criação, mais recente primeiro

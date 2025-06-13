@@ -48,7 +48,7 @@ export interface EvaluationCompletedResponseDto {
   evaluation: EvaluationResponseDto;
   articleFinalized: boolean; // Se o artigo foi finalizado (todas avaliações concluídas)
   finalGrade?: number; // Nota final calculada (se finalizado)
-  finalStatus?: "APPROVED" | "TO_CORRECTION" | "REJECTED"; // Status final (se finalizado)
+  finalStatus: "APPROVED" | "IN_CORRECTION" | "REJECTED" | "IN_EVALUATION"; // Status final (se finalizado)
   totalEvaluations: number; // Total de avaliações necessárias
   completedEvaluations: number; // Total de avaliações já feitas
 }

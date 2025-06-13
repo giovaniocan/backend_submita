@@ -62,6 +62,7 @@ export class EvaluationService {
         evaluationDate: new Date(),
         userId,
         articleVersionId: evaluationData.articleVersionId,
+        evaluationStatus: evaluationData.status,
       });
 
       await this.assignmentRepository.markAsCorrected(
@@ -79,11 +80,22 @@ export class EvaluationService {
 
       let articleFinalized = false;
       let finalGrade: number | undefined;
-      let finalStatus: "APPROVED" | "IN_CORRECTION" | "REJECTED" | undefined;
+      let finalStatus:
+        | "APPROVED"
+        | "IN_CORRECTION"
+        | "REJECTED"
+        | "IN_EVALUATION";
+      finalStatus = "IN_EVALUATION";
+
+      console.log("avaliacoes feitas", updatedArticle.evaluationsDone);
+      console.log("total de avaliacoes necessarias", totalEvaluationsNeeded);
 
       if (updatedArticle.evaluationsDone >= totalEvaluationsNeeded) {
         // ✅ TODAS AS AVALIAÇÕES CONCLUÍDAS - FINALIZAR ARTIGO
-        const result = await this.finalizeArticle(article.id);
+        const result = await this.finalizeArticle(
+          articleVersion.id,
+          article.id
+        );
         articleFinalized = true;
         finalGrade = result.finalGrade;
         finalStatus = result.finalStatus;
@@ -93,8 +105,7 @@ export class EvaluationService {
         evaluation: await this.toEvaluationResponse(evaluation),
         articleFinalized,
         finalGrade,
-        finalStatus:
-          finalStatus === "IN_CORRECTION" ? "TO_CORRECTION" : finalStatus, // Converter IN_CORRECTION para TO_CORRECTION
+        finalStatus: finalStatus,
         totalEvaluations: totalEvaluationsNeeded,
         completedEvaluations: updatedArticle.evaluationsDone,
       };
@@ -275,15 +286,20 @@ export class EvaluationService {
     }
   }
 
-  private async finalizeArticle(articleId: string): Promise<{
+  private async finalizeArticle(
+    articleVersionId: string,
+    articleId: string
+  ): Promise<{
     finalGrade: number;
     finalStatus: "APPROVED" | "IN_CORRECTION" | "REJECTED";
   }> {
     // 1️⃣ BUSCAR TODAS AS AVALIAÇÕES DO ARTIGO
     const evaluations =
       await this.evaluationRepository.getEvaluationsByArticleVersionId(
-        articleId
+        articleVersionId
       );
+
+    console.log("Avaliações encontradas:", evaluations);
 
     if (evaluations.length === 0) {
       throw new AppError("No evaluations found for this article", 500);
@@ -292,17 +308,23 @@ export class EvaluationService {
     // 2️⃣ CALCULAR NOTA FINAL E STATUS
     const finalGrade = this.calculateFinalGrade(evaluations);
     const finalStatus = this.calculateFinalStatus(evaluations);
+    this.sendEmailByStatus(finalStatus);
 
     // 3️⃣ ATUALIZAR O ARTIGO COM RESULTADO FINAL
-    await this.articleRepository.update(articleId, {
-      status: finalStatus,
-      // Opcionalmente pode adicionar um campo finalGrade na tabela
-    });
+    await this.articleRepository.updateStatus(articleId, finalStatus);
 
     return {
       finalGrade,
       finalStatus,
     };
+  }
+
+  private sendEmailByStatus(
+    finalStatus: "APPROVED" | "IN_CORRECTION" | "REJECTED"
+  ) {
+    //aqui vamos fazer uma logica, se foi aprovado, enviar um email de aprovação
+    // se foi reprovado, enviar um email de reprovação
+    // se for in correction, enviar um email falando que precisa de correção
   }
 
   private calculateFinalGrade(evaluations: Evaluation[]): number {

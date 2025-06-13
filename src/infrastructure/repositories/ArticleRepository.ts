@@ -1,6 +1,6 @@
 // src/infrastructure/repositories/ArticleRepository.ts
 
-import { Article } from "../../generated/prisma";
+import { Article, ArticleStatus } from "../../generated/prisma";
 import { prisma } from "../../lib/prisma";
 
 interface CreateArticleData {
@@ -56,6 +56,19 @@ export class ArticleRepository {
     return await prisma.article.update({
       where: { id },
       data,
+    });
+  }
+
+  async updateStatus(
+    id: string,
+    articleStatus: ArticleStatus
+  ): Promise<Article> {
+    console.log("Updating article status:", id, articleStatus);
+    return await prisma.article.update({
+      where: { id },
+      data: {
+        status: articleStatus,
+      },
     });
   }
 
