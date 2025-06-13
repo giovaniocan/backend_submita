@@ -346,73 +346,84 @@ export class EvaluationService {
   private calculateFinalStatus(
     evaluations: Evaluation[]
   ): "APPROVED" | "IN_CORRECTION" | "REJECTED" {
-    // Regras baseadas na nota final
-
     const quantityOfEvaluations = evaluations.length;
-    let articleStatus: "APPROVED" | "IN_CORRECTION" | "REJECTED" | undefined;
 
     if (quantityOfEvaluations === 0) {
       throw new AppError("Cannot calculate status without evaluations", 500);
     }
 
+    // Contar cada tipo de status
+    const approvedCount = evaluations.filter(
+      (e) => e.status === "APPROVED"
+    ).length;
+    const toCorrectionCount = evaluations.filter(
+      (e) => e.status === "TO_CORRECTION"
+    ).length;
+    const rejectedCount = evaluations.filter(
+      (e) => e.status === "REJECTED"
+    ).length;
+
+    // ========================================
+    // REGRA 1: UM AVALIADOR (DIRECT)
+    // ========================================
     if (quantityOfEvaluations === 1) {
       const evaluation = evaluations[0];
+
       if (evaluation.status === "APPROVED") {
-        articleStatus = "APPROVED";
+        return "APPROVED";
       } else if (evaluation.status === "TO_CORRECTION") {
-        articleStatus = "IN_CORRECTION";
+        return "IN_CORRECTION";
       } else {
-        articleStatus = "REJECTED";
-      }
-    } else if (quantityOfEvaluations === 2) {
-      const firstEvaluation = evaluations[0];
-      const secondEvaluation = evaluations[1];
-
-      if (
-        firstEvaluation.status === "APPROVED" &&
-        secondEvaluation.status === "APPROVED"
-      ) {
-        articleStatus = "APPROVED";
-      } else if (
-        firstEvaluation.status === "TO_CORRECTION" ||
-        secondEvaluation.status === "TO_CORRECTION"
-      ) {
-        articleStatus = "IN_CORRECTION";
-      } else {
-        articleStatus = "REJECTED";
-      }
-    } else if (quantityOfEvaluations >= 3) {
-      const approvedCount = evaluations.filter(
-        (e) => e.status === "APPROVED"
-      ).length;
-      const toCorrectionCount = evaluations.filter(
-        (e) => e.status === "TO_CORRECTION"
-      ).length;
-      const rejectedCount = evaluations.filter(
-        (e) => e.status === "REJECTED"
-      ).length;
-
-      if (approvedCount >= quantityOfEvaluations / 2) {
-        articleStatus = "APPROVED";
-      } else if (toCorrectionCount > rejectedCount) {
-        articleStatus = "IN_CORRECTION";
-      } else {
-        articleStatus = "REJECTED";
+        return "REJECTED";
       }
     }
 
-    if (!articleStatus) {
-      throw new AppError("Unable to determine article status", 500);
+    // ========================================
+    // REGRA 2: DOIS AVALIADORES (PAIR)
+    // ========================================
+    else if (quantityOfEvaluations === 2) {
+      // Ambos aprovaram
+      if (approvedCount === 2) {
+        return "APPROVED";
+      }
+      // Ambos rejeitaram
+      else if (rejectedCount === 2) {
+        return "REJECTED";
+      }
+      // Qualquer outro caso (pelo menos 1 quer correção, ou 1 aprovou + 1 rejeitou)
+      else {
+        return "IN_CORRECTION";
+      }
     }
 
-    return articleStatus;
-    // TODO: Implementar critério de desempate para discrepâncias grandes
-    // Exemplo: se diferença entre notas for > 3 pontos, pode precisar de avaliação adicional
-    // const maxGrade = Math.max(...evaluations.map(e => e.grade));
-    // const minGrade = Math.min(...evaluations.map(e => e.grade));
-    // if (maxGrade - minGrade > 3) {
-    //   // Lógica para discrepância grande
-    // }
+    // ========================================
+    // REGRA 3: TRÊS OU MAIS AVALIADORES (PANEL)
+    // ========================================
+    else {
+      const halfQuantity = quantityOfEvaluations / 2;
+
+      // MAIORIA ABSOLUTA APROVOU (mais de 50%)
+      if (approvedCount > halfQuantity) {
+        return "APPROVED";
+      }
+
+      // MAIORIA ABSOLUTA REJEITOU (mais de 50%)
+      else if (rejectedCount > halfQuantity) {
+        return "REJECTED";
+      }
+
+      // CASOS MISTOS (nenhuma maioria absoluta)
+      else {
+        // Se tem mais "TO_CORRECTION" que "REJECTED" -> correção
+        if (toCorrectionCount >= rejectedCount) {
+          return "IN_CORRECTION";
+        }
+        // Se tem mais "REJECTED" que "TO_CORRECTION" -> rejeição
+        else {
+          return "REJECTED";
+        }
+      }
+    }
   }
 
   private validateCreateData(evaluationData: CreateEvaluationDto): void {
