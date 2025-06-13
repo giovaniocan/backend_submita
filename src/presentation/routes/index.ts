@@ -8,6 +8,7 @@ import { fileUploadRoutes } from "./fileUploadRoutes";
 import { testEmailRoutes } from "./testEmailRoutes";
 import { articleRoutes } from "./articleRoutes";
 import { evaluationRoutes } from "./evaluationRoutes";
+import { dashboardRoutes } from "./dashboardRoutes";
 
 const router = Router();
 
@@ -15,6 +16,7 @@ router.use("/auth", authRoutes);
 router.use("/events", eventRoutes);
 router.use("/users", userRoutes);
 router.use("/articles", articleRoutes);
+router.use("/dashboard", dashboardRoutes);
 
 // Rotas de upload de arquivos
 router.use("/files", fileUploadRoutes);

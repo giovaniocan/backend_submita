@@ -20,7 +20,9 @@ import {
 import { EventEvaluatorRepository } from "../../infrastructure/repositories/EventEvaluatorRepository";
 import { ArticleEvaluatorAssignmentRepository } from "../../infrastructure/repositories/ArticleEvaluatorAssignmentRepository";
 import {
+  Article,
   ArticleKeyword,
+  ArticleStatus,
   ArticleVersion,
   RelatedAuthor,
 } from "../../generated/prisma";
@@ -404,6 +406,54 @@ export class ArticleService {
       console.error("❌ Error removing evaluator from article:", error);
       return false;
     }
+  }
+
+  async getArticlesByEventId(eventId: string): Promise<{
+    articles: Article[];
+  }> {
+    if (!this.isValidUUID(eventId)) {
+      throw new AppError("Invalid event ID format", 400);
+    }
+
+    const articles = await this.articleRepository.findByEventId(eventId);
+
+    if (!articles) {
+      throw new AppError("Articles not found", 404);
+    }
+
+    return { articles };
+  }
+
+  async getArticlesByEventIdAndStatus(eventId: string, status: ArticleStatus): Promise<{
+    articles: Article[];
+  }> {
+    if (!this.isValidUUID(eventId)) {
+      throw new AppError("Invalid event ID format", 400);
+    }
+
+    const articles = await this.articleRepository.findByEventIdAndStatus(eventId, status);
+
+    if (!articles) {
+      throw new AppError("Articles not found", 404);
+    }
+
+    return { articles };
+  }
+
+  async getArticlesPending(eventId: string): Promise<{
+    articles: Article[];
+  }> {
+    if (!this.isValidUUID(eventId)) {
+      throw new AppError("Invalid event ID format", 400);
+    }
+
+    const articles = await this.articleRepository.findArticlesPending(eventId);
+
+    if (!articles) {
+      throw new AppError("Articles not found", 404);
+    }
+
+    return { articles };
   }
   // ========================================
   // MÉTODOS PRIVADOS
