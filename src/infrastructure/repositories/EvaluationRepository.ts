@@ -45,6 +45,7 @@ export class EvaluationRepository {
       where: { id: evaluationId },
     });
   }
+
   async findByIdWithRelations(id: string): Promise<any> {
     return await prisma.evaluation.findUnique({
       where: { id },
@@ -73,5 +74,32 @@ export class EvaluationRepository {
         },
       },
     });
+  }
+
+  async countByArticleVersionId(articleVersionId: string): Promise<number> {
+    try {
+      const count = await prisma.evaluation.count({
+        where: { articleVersionId },
+      });
+
+      return count;
+    } catch (error) {
+      console.error("❌ Error counting evaluations by article version:", error);
+      throw new Error("Failed to count evaluations");
+    }
+  }
+
+  // Deletar avaliação (HARD DELETE)
+  async delete(evaluationId: string): Promise<void> {
+    try {
+      await prisma.evaluation.delete({
+        where: { id: evaluationId },
+      });
+
+      console.log(`✅ Evaluation ${evaluationId} deleted successfully`);
+    } catch (error) {
+      console.error("❌ Error deleting evaluation:", error);
+      throw new Error("Failed to delete evaluation");
+    }
   }
 }

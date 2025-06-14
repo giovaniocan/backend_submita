@@ -98,6 +98,21 @@ export class ArticleRepository {
       data: { evaluationsDone: newEvaluationsDone },
     });
   }
+
+  async decrementEvaluationsDone(id: string): Promise<Article> {
+    const article = await this.findById(id);
+
+    if (!article) {
+      throw new Error("Article not found");
+    }
+
+    const newEvaluationsDone = article.evaluationsDone - 1;
+
+    return await prisma.article.update({
+      where: { id },
+      data: { evaluationsDone: newEvaluationsDone },
+    });
+  }
   // Hard delete
   async hardDelete(id: string): Promise<Article> {
     return await prisma.article.delete({

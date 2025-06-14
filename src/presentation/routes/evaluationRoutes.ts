@@ -1,6 +1,10 @@
 // src/presentation/routes/evaluationRoutes.ts
 import { Router } from "express";
-import { authenticate, requireEvaluator } from "../middlewares/authMiddleware";
+import {
+  authenticate,
+  requireEvaluator,
+  requireStaff,
+} from "../middlewares/authMiddleware";
 import { notifyArticleReviewed } from "../middlewares/emailNotificationMiddleware";
 import { EvaluationController } from "../controllers/EvaluationController";
 
@@ -19,6 +23,16 @@ router.post(
   //notifyArticleReviewed(),
   async (req, res, next) => {
     await evaluationController.createEvaluation(req, res, next);
+  }
+);
+
+// Deletar avaliação (EVALUATOR que criou OU COORDINATOR)
+router.delete(
+  "/:evaluationId",
+  authenticate,
+  requireStaff(), // EVALUATOR ou COORDINATOR
+  async (req, res, next) => {
+    await evaluationController.deleteEvaluation(req, res, next);
   }
 );
 /*

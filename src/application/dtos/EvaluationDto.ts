@@ -43,6 +43,30 @@ export interface EvaluationResponseDto {
   };
 }
 
+export interface DeleteEvaluationResponseDto {
+  deletedEvaluation: {
+    id: string;
+    grade: number;
+    evaluationStatus: string;
+    userId: string;
+    articleVersionId: string;
+    deletedAt: Date;
+  };
+  articleUpdated: {
+    id: string;
+    title: string;
+    status: string;
+    evaluationsDone: number;
+    currentVersion: number;
+  };
+  impactSummary: {
+    evaluationsRemaining: number;
+    articleStatusChanged: boolean;
+    newArticleStatus?: string;
+    wasFinalized: boolean; // Se artigo estava finalizado e voltou para IN_EVALUATION
+  };
+}
+
 // DTO para resposta quando avaliação finaliza todas as avaliações do artigo
 export interface EvaluationCompletedResponseDto {
   evaluation: EvaluationResponseDto;
