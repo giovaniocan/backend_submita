@@ -64,6 +64,7 @@ export interface DeleteEvaluationResponseDto {
     articleStatusChanged: boolean;
     newArticleStatus?: string;
     wasFinalized: boolean; // Se artigo estava finalizado e voltou para IN_EVALUATION
+    requiresReassignment: boolean; // Se artigo ficou sem avaliações (voltou para SUBMITTED)
   };
 }
 

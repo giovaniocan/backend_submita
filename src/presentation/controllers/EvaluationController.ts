@@ -104,17 +104,16 @@ export class EvaluationController {
     next: NextFunction
   ): Promise<void> {
     try {
-      // 1️⃣ VERIFICAR SE USUÁRIO ESTÁ AUTENTICADO
+      // 1️⃣ VERIFICAR AUTENTICAÇÃO
       const user = req.user;
       if (!user) {
         res.status(401).json(ApiResponse.error("User not authenticated", 401));
         return;
       }
 
-      // 2️⃣ EXTRAIR ID DA AVALIAÇÃO DA URL
+      // 2️⃣ EXTRAIR E VALIDAR ID
       const { evaluationId } = req.params;
 
-      // 3️⃣ VALIDAÇÕES BÁSICAS NO CONTROLLER
       if (!evaluationId) {
         res
           .status(400)
@@ -129,27 +128,52 @@ export class EvaluationController {
         return;
       }
 
-      // 4️⃣ CHAMAR O SERVICE
+      // 3️⃣ CHAMAR O SERVICE
       const result = await this.evaluationService.deleteEvaluation(
         evaluationId,
-        user.id, // userId do token
-        user.role // role do usuário
+        user.id,
+        user.role
       );
 
-      // 5️⃣ DETERMINAR MENSAGEM DE RESPOSTA
+      // 4️⃣ DETERMINAR MENSAGEM PERSONALIZADA
       let message = "Evaluation deleted successfully!";
 
-      if (result.impactSummary.articleStatusChanged) {
+      // ✅ MENSAGENS ESPECÍFICAS BASEADAS NO IMPACTO
+      if (result.impactSummary.requiresReassignment) {
+        message +=
+          " Article returned to SUBMITTED status and requires new evaluation assignment.";
+      } else if (result.impactSummary.articleStatusChanged) {
         message += ` Article status changed to ${result.impactSummary.newArticleStatus}.`;
       }
 
       if (result.impactSummary.wasFinalized) {
         message +=
-          " Article was previously finalized and returned to evaluation.";
+          " The article was previously finalized and has been returned to evaluation.";
       }
 
-      // 6️⃣ RETORNAR RESPOSTA
-      res.status(200).json(ApiResponse.success(result, message));
+      // 5️⃣ INFORMAÇÕES ADICIONAIS PARA DEBUGGING
+      const additionalInfo = {
+        evaluationsRemaining: result.impactSummary.evaluationsRemaining,
+        statusChanged: result.impactSummary.articleStatusChanged,
+        questionResponsesDeleted: true, // Sempre deleta conforme regra
+        rulesApplied: {
+          "Only own evaluations": "✅ Verified",
+          "Version restrictions": "✅ Only current version allowed",
+          "Time restrictions": "✅ Applied based on article status",
+          "Question responses": "✅ Deleted together",
+        },
+      };
+
+      // 6️⃣ RESPOSTA FINAL
+      res.status(200).json(
+        ApiResponse.success(
+          {
+            ...result,
+            additionalInfo,
+          },
+          message
+        )
+      );
     } catch (error) {
       this.handleError(error, res, "Delete evaluation error");
     }

@@ -1,16 +1,29 @@
-import { Evaluation } from "../../generated/prisma";
+import {
+  Article,
+  ArticleVersion,
+  Evaluation,
+  Event as PrismaEvent,
+} from "../../generated/prisma";
 import { ArticleEvaluatorAssignmentRepository } from "../../infrastructure/repositories/ArticleEvaluatorAssignmentRepository";
 import { ArticleRepository } from "../../infrastructure/repositories/ArticleRepository";
 import { ArticleVersionRepository } from "../../infrastructure/repositories/ArticleVersionRepository";
 import { EvaluationRepository } from "../../infrastructure/repositories/EvaluationRepository";
 import { EventEvaluatorRepository } from "../../infrastructure/repositories/EventEvaluatorRepository";
 import { EventRepository } from "../../infrastructure/repositories/EventRepository";
+import { prisma } from "../../lib/prisma";
 import { AppError } from "../../shared/errors/AppError";
 import {
   CreateEvaluationDto,
   DeleteEvaluationResponseDto,
   EvaluationCompletedResponseDto,
 } from "../dtos/EvaluationDto";
+
+interface DeleteValidationContext {
+  evaluation: Evaluation;
+  article: Article;
+  event: PrismaEvent;
+  articleVersion: ArticleVersion;
+}
 
 export class EvaluationService {
   private evaluationRepository: EvaluationRepository;
@@ -19,6 +32,22 @@ export class EvaluationService {
   private eventRepository: EventRepository;
   private eventEvaluatorRepository: EventEvaluatorRepository;
   private assignmentRepository: ArticleEvaluatorAssignmentRepository;
+
+  private static readonly BUSINESS_RULES = {
+    DELETE_DEADLINES: {
+      FINALIZED_ARTICLES_HOURS: 24,
+      GENERAL_EVALUATIONS_DAYS: 3,
+    },
+    PERMISSIONS: {
+      EVALUATOR_CAN_DELETE_OWN: true,
+      COORDINATOR_CAN_DELETE_ANY: false,
+    },
+    CASCADE_ACTIONS: {
+      DELETE_QUESTION_RESPONSES: true,
+      RESET_ASSIGNMENT_STATUS: true,
+      RECALCULATE_ARTICLE_STATUS: true,
+    },
+  } as const;
 
   constructor() {
     this.evaluationRepository = new EvaluationRepository();
@@ -524,7 +553,7 @@ export class EvaluationService {
       },
     };
   }
-
+  //DELETE METHODS
   //----------------------------------------------------
 
   async deleteEvaluation(
@@ -532,235 +561,49 @@ export class EvaluationService {
     currentUserId: string,
     currentUserRole: string
   ): Promise<DeleteEvaluationResponseDto> {
-    // 1️⃣ VALIDAÇÃO INICIAL DE FORMATO
-    if (!this.isValidUUID(evaluationId)) {
-      throw new AppError("Invalid evaluation ID format", 400);
-    }
+    this.validateInputs(evaluationId, currentUserId, currentUserRole);
 
-    try {
-      // 2️⃣ EXECUTAR TODAS AS VALIDAÇÕES
-      const { evaluation, article, event, articleVersion } =
-        await this.validateCanDeleteEvaluation(
-          evaluationId,
-          currentUserId,
-          currentUserRole
-        );
+    const context = await this.gatherValidationContext(evaluationId);
 
-      console.log(
-        `🗑️ Starting deletion process for evaluation ${evaluationId}`
-      );
+    await this.validateBusinessRules(context, currentUserId, currentUserRole);
 
-      // 3️⃣ CAPTURAR ESTADO ANTERIOR (para resposta)
-      const previousArticleStatus = article.status;
-      const previousEvaluationsDone = article.evaluationsDone;
+    const previousState = this.captureCurrentState(context.article);
 
-      // Dados da avaliação que será deletada
-      const deletedEvaluationData = {
-        id: evaluation.id,
-        grade: evaluation.grade,
-        evaluationStatus: evaluation.status,
-        userId: evaluation.userId,
-        articleVersionId: evaluation.articleVersionId,
-        deletedAt: new Date(),
-      };
+    await this.executeEvaluationDeletion(context);
 
-      // 4️⃣ EXECUTAR DELEÇÃO (TRANSAÇÃO)
-      await this.executeEvaluationDeletion(evaluation, article, articleVersion);
+    const updatedArticle = await this.getUpdatedArticle(context.article.id);
 
-      // 5️⃣ BUSCAR ESTADO ATUAL APÓS DELEÇÃO
-      const updatedArticle = await this.articleRepository.findById(article.id);
-      if (!updatedArticle) {
-        throw new AppError("Article not found after deletion", 500);
-      }
-
-      // 6️⃣ CALCULAR IMPACTO
-      const remainingEvaluations =
-        await this.evaluationRepository.countByArticleVersionId(
-          articleVersion.id
-        );
-
-      const articleStatusChanged =
-        previousArticleStatus !== updatedArticle.status;
-      const wasFinalized = ["APPROVED", "REJECTED", "IN_CORRECTION"].includes(
-        previousArticleStatus
-      );
-
-      console.log(
-        `✅ Evaluation deleted successfully. Remaining evaluations: ${remainingEvaluations}`
-      );
-
-      // 7️⃣ MONTAR RESPOSTA COMPLETA
-      return {
-        deletedEvaluation: deletedEvaluationData,
-        articleUpdated: {
-          id: updatedArticle.id,
-          title: updatedArticle.title,
-          status: updatedArticle.status,
-          evaluationsDone: updatedArticle.evaluationsDone,
-          currentVersion: updatedArticle.currentVersion,
-        },
-        impactSummary: {
-          evaluationsRemaining: remainingEvaluations,
-          articleStatusChanged,
-          newArticleStatus: articleStatusChanged
-            ? updatedArticle.status
-            : undefined,
-          wasFinalized,
-        },
-      };
-    } catch (error) {
-      console.error("❌ Error deleting evaluation:", error);
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError("Failed to delete evaluation", 500);
-    }
-  }
-
-  private async executeEvaluationDeletion(
-    evaluation: any,
-    article: any,
-    articleVersion: any
-  ): Promise<void> {
-    try {
-      console.log(`🔄 Executing deletion transaction...`);
-
-      // 1️⃣ DELETAR A AVALIAÇÃO (HARD DELETE)
-      await this.evaluationRepository.delete(evaluation.id);
-
-      // 2️⃣ DECREMENTAR EVALUATIONS_DONE DO ARTIGO
-      const newEvaluationsDone = Math.max(0, article.evaluationsDone - 1);
-
-      // 3️⃣ MARCAR ASSIGNMENT COMO NÃO CORRIGIDO
-      await this.assignmentRepository.markAsUncorrectedByArticleAndUser(
-        article.id,
-        evaluation.userId
-      );
-
-      // 4️⃣ DETERMINAR NOVO STATUS DO ARTIGO
-      const newArticleStatus =
-        await this.calculateNewArticleStatusAfterDeletion(
-          article,
-          articleVersion.id,
-          newEvaluationsDone
-        );
-
-      // 5️⃣ ATUALIZAR ARTIGO COM NOVO STATUS E CONTAGEM
-      await this.articleRepository.update(article.id, {
-        status: newArticleStatus,
-      });
-      await this.articleRepository.decrementEvaluationsDone(article.id);
-
-      console.log(
-        `✅ Transaction completed. New status: ${newArticleStatus}, Evaluations: ${newEvaluationsDone}`
-      );
-    } catch (error) {
-      console.error("❌ Error in deletion transaction:", error);
-      throw new AppError("Failed to execute deletion transaction", 500);
-    }
-  }
-
-  private async calculateNewArticleStatusAfterDeletion(
-    article: any,
-    articleVersionId: string,
-    newEvaluationsDone: number
-  ): Promise<
-    | "APPROVED"
-    | "IN_CORRECTION"
-    | "REJECTED"
-    | "SUBMITTED"
-    | "IN_EVALUATION"
-    | undefined
-  > {
-    // Se não sobrou nenhuma avaliação, volta para SUBMITTED
-    if (newEvaluationsDone === 0) {
-      console.log(`📝 No evaluations remaining, status: SUBMITTED`);
-      return "SUBMITTED";
-    }
-
-    // Se ainda tem avaliações, mas artigo estava finalizado, volta para IN_EVALUATION
-    const finalizedStatuses = ["APPROVED", "REJECTED", "IN_CORRECTION"];
-    if (finalizedStatuses.includes(article.status)) {
-      console.log(`🔄 Article was finalized, returning to: IN_EVALUATION`);
-      return "IN_EVALUATION";
-    }
-
-    // Se artigo já estava em avaliação, mantém o status
-    console.log(`📊 Maintaining current status: ${article.status}`);
-    return article.status;
-  }
-
-  private async validateCanDeleteEvaluation(
-    evaluationId: string,
-    currentUserId: string,
-    currentUserRole: string
-  ): Promise<{
-    evaluation: any;
-    article: any;
-    event: any;
-    articleVersion: any;
-  }> {
-    // 1️⃣ VALIDAÇÕES DE PERMISSÃO
-    await this.validateDeletePermissions(currentUserId, currentUserRole);
-
-    // 2️⃣ VALIDAÇÕES DE EXISTÊNCIA
-    const { evaluation, article, event, articleVersion } =
-      await this.validateDeleteExistence(evaluationId);
-
-    // 3️⃣ VALIDAÇÕES TEMPORAIS
-    await this.validateDeleteTiming(event);
-
-    // 4️⃣ VALIDAÇÕES DE VERSÃO
-    await this.validateDeleteVersion(article, articleVersion);
-
-    // 5️⃣ VALIDAÇÕES DE STATUS DO ARTIGO
-    await this.validateDeleteArticleStatus(article);
-
-    // 6️⃣ VALIDAÇÕES DE IMPACTO NO SISTEMA
-    await this.validateDeleteImpact(article, event, articleVersion.id);
-
-    // 7️⃣ VALIDAÇÕES DE INTEGRIDADE
-    await this.validateDeleteIntegrity(
-      evaluation,
-      article,
-      currentUserId,
-      currentUserRole
+    return this.buildResponse(
+      context.evaluation,
+      updatedArticle,
+      previousState
     );
-
-    return { evaluation, article, event, articleVersion };
   }
 
-  // ========================================
-  // 1️⃣ VALIDAÇÕES DE PERMISSÃO
-  // ========================================
-  private async validateDeletePermissions(
-    currentUserId: string,
-    currentUserRole: string
-  ): Promise<void> {
-    // Verificar se usuário está autenticado (já feito no controller, mas dupla verificação)
-    if (!currentUserId) {
-      throw new AppError("User authentication required", 401);
+  private validateInputs(
+    evaluationId: string,
+    userId: string,
+    userRole: string
+  ): void {
+    if (!evaluationId || !this.isValidUUID(evaluationId)) {
+      throw new AppError("Valid evaluation ID is required", 400);
     }
 
-    // Verificar se tem role adequado (EVALUATOR ou COORDINATOR)
-    if (!["EVALUATOR", "COORDINATOR"].includes(currentUserRole)) {
-      throw new AppError(
-        "Only evaluators and coordinators can delete evaluations",
-        403
-      );
+    if (!userId || !this.isValidUUID(userId)) {
+      throw new AppError("Valid user ID is required", 400);
+    }
+
+    if (
+      !userRole ||
+      !["STUDENT", "EVALUATOR", "COORDINATOR"].includes(userRole)
+    ) {
+      throw new AppError("Valid user role is required", 400);
     }
   }
 
-  // ========================================
-  // 2️⃣ VALIDAÇÕES DE EXISTÊNCIA
-  // ========================================
-  private async validateDeleteExistence(evaluationId: string): Promise<{
-    evaluation: any;
-    article: any;
-    event: any;
-    articleVersion: any;
-  }> {
-    // Verificar se avaliação existe
+  private async gatherValidationContext(
+    evaluationId: string
+  ): Promise<DeleteValidationContext> {
     const evaluation = await this.evaluationRepository.findByIdWithRelations(
       evaluationId
     );
@@ -768,7 +611,6 @@ export class EvaluationService {
       throw new AppError("Evaluation not found", 404);
     }
 
-    // Verificar se versão do artigo existe
     const articleVersion = await this.articleVersionRepository.findById(
       evaluation.articleVersionId
     );
@@ -776,7 +618,6 @@ export class EvaluationService {
       throw new AppError("Article version not found", 404);
     }
 
-    // Verificar se artigo existe e está ativo
     const article = await this.articleRepository.findActiveById(
       articleVersion.articleId
     );
@@ -784,7 +625,6 @@ export class EvaluationService {
       throw new AppError("Article not found or inactive", 404);
     }
 
-    // Verificar se evento existe e está ativo
     const event = await this.eventRepository.findActiveById(article.eventId);
     if (!event) {
       throw new AppError("Event not found or inactive", 404);
@@ -793,157 +633,244 @@ export class EvaluationService {
     return { evaluation, article, event, articleVersion };
   }
 
-  // ========================================
-  // 3️⃣ VALIDAÇÕES TEMPORAIS
-  // ========================================
-  private async validateDeleteTiming(event: any): Promise<void> {
-    const now = new Date();
+  private async validateBusinessRules(
+    context: DeleteValidationContext,
+    currentUserId: string,
+    currentUserRole: string
+  ): Promise<void> {
+    this.validatePermissions(
+      context.evaluation,
+      currentUserId,
+      currentUserRole
+    );
+    this.validateTiming(context.evaluation, context.article, context.event);
+    this.validateVersioning(context.article, context.articleVersion);
+  }
 
-    // Verificar se evento já começou
-    if (now < event.eventStartDate) {
-      throw new AppError("Cannot delete evaluations before event starts", 400);
+  private validatePermissions(
+    evaluation: any,
+    userId: string,
+    userRole: string
+  ): void {
+    const rules = EvaluationService.BUSINESS_RULES.PERMISSIONS;
+
+    if (userRole === "EVALUATOR") {
+      if (!rules.EVALUATOR_CAN_DELETE_OWN) {
+        throw new AppError(
+          "Evaluators are not allowed to delete evaluations",
+          403
+        );
+      }
+      if (evaluation.userId !== userId) {
+        throw new AppError("You can only delete your own evaluations", 403);
+      }
+    } else if (userRole === "COORDINATOR") {
+      if (!rules.COORDINATOR_CAN_DELETE_ANY) {
+        throw new AppError("Coordinators cannot delete evaluations", 403);
+      }
+    } else {
+      throw new AppError("Only evaluators can delete evaluations", 403);
     }
+  }
 
-    // Verificar se evento ainda está em andamento
+  private validateTiming(evaluation: any, article: any, event: any): void {
+    const now = new Date();
+    const evaluationDate = new Date(evaluation.evaluationDate);
+    const rules = EvaluationService.BUSINESS_RULES.DELETE_DEADLINES;
+
+    // Regra: Não pode deletar após evento terminar
     if (now > event.eventEndDate) {
       throw new AppError(
         "Cannot delete evaluations after event has ended",
         400
       );
     }
-  }
 
-  // ========================================
-  // 4️⃣ VALIDAÇÕES DE VERSÃO
-  // ========================================
-  private async validateDeleteVersion(
-    article: any,
-    articleVersion: any
-  ): Promise<void> {
-    // Buscar versão atual do artigo
-    const currentVersion = article.currentVersion;
+    const finalizedStatuses = ["APPROVED", "REJECTED", "IN_CORRECTION"];
+    const isFinalized = finalizedStatuses.includes(article.status);
 
-    // Buscar versão da avaliação que está tentando deletar
-    const evaluationVersion = articleVersion.version;
+    if (isFinalized) {
+      // Regra: 24h após finalização
+      const hoursAfterEvaluation =
+        (now.getTime() - evaluationDate.getTime()) / (1000 * 60 * 60);
 
-    console.log(
-      `🔍 Version check: Current=${currentVersion}, Evaluation=${evaluationVersion}`
-    );
-
-    // CRÍTICO: Verificar se versão da avaliação = versão atual do artigo
-    if (evaluationVersion < currentVersion) {
-      throw new AppError(
-        `Cannot delete evaluation from previous version. Current version: ${currentVersion}, Evaluation version: ${evaluationVersion}`,
-        400
-      );
-    }
-  }
-
-  // ========================================
-  // 5️⃣ VALIDAÇÕES DE STATUS DO ARTIGO
-  // ========================================
-  private async validateDeleteArticleStatus(article: any): Promise<void> {
-    const allowedStatuses = ["SUBMITTED", "IN_EVALUATION"];
-    const prohibitedStatuses = ["APPROVED", "REJECTED", "IN_CORRECTION"];
-
-    if (prohibitedStatuses.includes(article.status)) {
-      throw new AppError(
-        `Cannot delete evaluation when article status is ${article.status}. Article has already been finalized.`,
-        400
-      );
-    }
-
-    if (!allowedStatuses.includes(article.status)) {
-      throw new AppError(
-        `Cannot delete evaluation when article status is ${article.status}`,
-        400
-      );
-    }
-  }
-
-  // ========================================
-  // 6️⃣ VALIDAÇÕES DE IMPACTO NO SISTEMA
-  // ========================================
-  private async validateDeleteImpact(
-    article: any,
-    event: any,
-    articleVersionId: string
-  ): Promise<void> {
-    // Verificar quantas avaliações restam após deleção
-    const currentEvaluationsCount =
-      await this.evaluationRepository.countByArticleVersionId(articleVersionId);
-    const evaluationsAfterDeletion = currentEvaluationsCount - 1;
-
-    console.log(
-      `📊 Impact check: Current=${currentEvaluationsCount}, After deletion=${evaluationsAfterDeletion}`
-    );
-
-    // Se artigo estiver IN_EVALUATION, pode deletar independente do mínimo (SUA REGRA ESPECÍFICA)
-    if (article.status === "IN_EVALUATION") {
-      console.log(
-        "✅ Article is IN_EVALUATION - deletion allowed regardless of minimum"
-      );
-      return; // Permite deletar
-    }
-
-    // Para outros status, verificar mínimo necessário
-    const minimumRequired = this.getMinimumEvaluatorsByType(
-      event.evaluationType
-    );
-
-    /*
-    if (evaluationsAfterDeletion < minimumRequired) {
-      throw new AppError(
-        `Cannot delete evaluation: ${event.evaluationType} evaluation requires at least ${minimumRequired} evaluations, but only ${evaluationsAfterDeletion} would remain`,
-        400
-      );
-    }
-      */
-  }
-
-  // ========================================
-  // 7️⃣ VALIDAÇÕES DE INTEGRIDADE
-  // ========================================
-  private async validateDeleteIntegrity(
-    evaluation: any,
-    article: any,
-    currentUserId: string,
-    currentUserRole: string
-  ): Promise<void> {
-    // Verificar se é o próprio avaliador OU coordenador com acesso ao evento
-    if (currentUserRole === "EVALUATOR") {
-      // Avaliador só pode deletar própria avaliação
-      if (evaluation.userId !== currentUserId) {
-        throw new AppError("You can only delete your own evaluations", 403);
+      if (hoursAfterEvaluation > rules.FINALIZED_ARTICLES_HOURS) {
+        throw new AppError(
+          `Cannot delete evaluation after ${rules.FINALIZED_ARTICLES_HOURS} hours of article finalization`,
+          400
+        );
       }
-    } else if (currentUserRole === "COORDINATOR") {
-      // Coordenador precisa ter acesso ao evento
-      const eventEvaluator =
-        await this.eventEvaluatorRepository.findByEventAndUser(
-          article.eventId,
-          currentUserId
+    } else {
+      // Regra: 3 dias para não finalizados
+      const daysAfterEvaluation =
+        (now.getTime() - evaluationDate.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (daysAfterEvaluation > rules.GENERAL_EVALUATIONS_DAYS) {
+        throw new AppError(
+          `Cannot delete evaluation after ${rules.GENERAL_EVALUATIONS_DAYS} days`,
+          400
+        );
+      }
+    }
+  }
+
+  private validateVersioning(article: any, articleVersion: any): void {
+    // Regra: Só pode deletar da versão atual
+    if (articleVersion.version !== article.currentVersion) {
+      throw new AppError(
+        `Cannot delete evaluation from previous version. Current: ${article.currentVersion}, Evaluation: ${articleVersion.version}`,
+        400
+      );
+    }
+  }
+
+  private captureCurrentState(article: any) {
+    const finalizedStatuses = ["APPROVED", "REJECTED", "IN_CORRECTION"];
+
+    return {
+      articleStatus: article.status,
+      evaluationsDone: article.evaluationsDone,
+      wasFinalized: finalizedStatuses.includes(article.status),
+    };
+  }
+
+  private calculateNewArticleStatus(
+    article: any,
+    newEvaluationsDone: number
+  ): "APPROVED" | "IN_CORRECTION" | "REJECTED" | "SUBMITTED" | "IN_EVALUATION" {
+    // Regra 1: Sem avaliações = SUBMITTED
+    if (newEvaluationsDone === 0) {
+      return "SUBMITTED";
+    }
+
+    // Regra 2: Artigo finalizado + deleção = volta para IN_EVALUATION
+    const finalizedStatuses = ["APPROVED", "REJECTED", "IN_CORRECTION"];
+    if (finalizedStatuses.includes(article.status)) {
+      return "IN_EVALUATION";
+    }
+
+    // Regra 3: Já estava em avaliação = mantém IN_EVALUATION
+    return "IN_EVALUATION";
+  }
+
+  private async executeEvaluationDeletion(
+    context: DeleteValidationContext
+  ): Promise<void> {
+    const { evaluation, article, articleVersion } = context;
+    const rules = EvaluationService.BUSINESS_RULES.CASCADE_ACTIONS;
+
+    await prisma.$transaction(async (tx) => {
+      console.log(`🔄 Executing evaluation deletion transaction...`);
+
+      // 1. Deletar question responses (se habilitado)
+      if (rules.DELETE_QUESTION_RESPONSES) {
+        await tx.questionResponse.deleteMany({
+          where: {
+            userId: evaluation.userId,
+            articleVersionId: evaluation.articleVersionId,
+          },
+        });
+        console.log("✅ Question responses deleted");
+      }
+
+      // 2. Deletar avaliação
+      await tx.evaluation.delete({
+        where: { id: evaluation.id },
+      });
+      console.log("✅ Evaluation deleted");
+
+      // 3. Reset assignment status (se habilitado)
+      if (rules.RESET_ASSIGNMENT_STATUS) {
+        await tx.articleEvaluatorAssignment.updateMany({
+          where: {
+            articleId: article.id,
+            userId: evaluation.userId,
+          },
+          data: { isCorrected: false },
+        });
+        console.log("✅ Assignment status reset");
+      }
+
+      // 4. Recalcular status do artigo (se habilitado)
+      if (rules.RECALCULATE_ARTICLE_STATUS) {
+        const newEvaluationsDone = Math.max(0, article.evaluationsDone - 1);
+        const newStatus = this.calculateNewArticleStatus(
+          article,
+          newEvaluationsDone
         );
 
-      // Coordenador pode não estar na tabela EventEvaluator, então só verificamos se for encontrado
-      // Se não for encontrado, assume que coordenador tem acesso (pode ajustar essa regra)
-    }
+        await tx.article.update({
+          where: { id: article.id },
+          data: {
+            status: newStatus,
+            evaluationsDone: newEvaluationsDone,
+          },
+        });
+        console.log(
+          `✅ Article updated: ${newStatus}, evaluations: ${newEvaluationsDone}`
+        );
+      }
+    });
+  }
 
-    // Verificar se assignment existe para este avaliador/artigo
-    const assignment = await this.assignmentRepository.findByArticleAndUser(
-      article.id,
-      evaluation.userId
-    );
-
-    if (!assignment) {
-      throw new AppError("Assignment not found for this evaluation", 404);
+  private async getUpdatedArticle(articleId: string) {
+    const updatedArticle = await this.articleRepository.findById(articleId);
+    if (!updatedArticle) {
+      throw new AppError("Article not found after deletion", 500);
     }
+    return updatedArticle;
+  }
 
-    // Verificar se assignment está marcado como isCorrected = true
-    if (!assignment.isCorrected) {
-      throw new AppError(
-        "Cannot delete evaluation that was not completed",
-        400
-      );
-    }
+  private buildResponse(
+    evaluation: any,
+    updatedArticle: any,
+    previousState: any
+  ): DeleteEvaluationResponseDto {
+    const impactSummary = {
+      evaluationsRemaining: updatedArticle.evaluationsDone,
+      articleStatusChanged:
+        previousState.articleStatus !== updatedArticle.status,
+      newArticleStatus:
+        previousState.articleStatus !== updatedArticle.status
+          ? updatedArticle.status
+          : undefined,
+      wasFinalized: previousState.wasFinalized,
+      requiresReassignment: updatedArticle.evaluationsDone === 0,
+    };
+
+    return {
+      deletedEvaluation: {
+        id: evaluation.id,
+        grade: evaluation.grade,
+        evaluationStatus: evaluation.status,
+        userId: evaluation.userId,
+        articleVersionId: evaluation.articleVersionId,
+        deletedAt: new Date(),
+      },
+      articleUpdated: {
+        id: updatedArticle.id,
+        title: updatedArticle.title,
+        status: updatedArticle.status,
+        evaluationsDone: updatedArticle.evaluationsDone,
+        currentVersion: updatedArticle.currentVersion,
+      },
+      impactSummary,
+    };
+  }
+
+  static getBusinessRules() {
+    return EvaluationService.BUSINESS_RULES;
+  }
+
+  static updateDeleteDeadlines(
+    finalizedHours: number,
+    generalDays: number
+  ): void {
+    (
+      EvaluationService.BUSINESS_RULES.DELETE_DEADLINES as any
+    ).FINALIZED_ARTICLES_HOURS = finalizedHours;
+    (
+      EvaluationService.BUSINESS_RULES.DELETE_DEADLINES as any
+    ).GENERAL_EVALUATIONS_DAYS = generalDays;
   }
 }
