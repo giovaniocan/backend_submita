@@ -1,5 +1,6 @@
 // src/infrastructure/repositories/ArticleRepository.ts
 
+
 import { Article, ArticleStatus, ArticleEvaluatorAssignment } from "../../generated/prisma";
 import { prisma } from "../../lib/prisma";
 
@@ -92,6 +93,19 @@ export class ArticleRepository {
     });
   }
 
+  async updateStatus(
+    id: string,
+    articleStatus: ArticleStatus
+  ): Promise<Article> {
+    console.log("Updating article status:", id, articleStatus);
+    return await prisma.article.update({
+      where: { id },
+      data: {
+        status: articleStatus,
+      },
+    });
+  }
+
   // ========================================
   // DELETE
   // ========================================
@@ -112,6 +126,21 @@ export class ArticleRepository {
     }
 
     const newEvaluationsDone = (article.evaluationsDone || 0) + 1;
+
+    return await prisma.article.update({
+      where: { id },
+      data: { evaluationsDone: newEvaluationsDone },
+    });
+  }
+
+  async decrementEvaluationsDone(id: string): Promise<Article> {
+    const article = await this.findById(id);
+
+    if (!article) {
+      throw new Error("Article not found");
+    }
+
+    const newEvaluationsDone = article.evaluationsDone - 1;
 
     return await prisma.article.update({
       where: { id },
