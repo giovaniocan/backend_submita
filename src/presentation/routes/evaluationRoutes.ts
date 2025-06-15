@@ -26,17 +26,17 @@ router.post(
   }
 );
 
-// Deletar avaliação (EVALUATOR que criou OU COORDINATOR)
-router.delete(
-  "/:evaluationId",
-  authenticate,
-  requireStaff(), // EVALUATOR ou COORDINATOR
-  async (req, res, next) => {
-    await evaluationController.deleteEvaluation(req, res, next);
-  }
-);
-/*
-// Buscar avaliações de um avaliador (apenas EVALUATOR)
+// ========================================
+// ROTAS DE CONSULTA (GET)
+// ========================================
+
+// Buscar avaliações com filtros opcionais (COORDINATOR + EVALUATOR)
+// IMPORTANTE: Esta rota deve vir ANTES da rota /:evaluationId
+router.get("/", authenticate, requireStaff(), async (req, res, next) => {
+  await evaluationController.getEvaluationsWithFilters(req, res, next);
+});
+
+// Buscar minhas avaliações (apenas EVALUATOR)
 router.get(
   "/my-evaluations",
   authenticate,
@@ -56,7 +56,7 @@ router.get(
   }
 );
 
-// Buscar avaliação específica por ID (COORDINATOR + EVALUATOR)
+// Buscar avaliação por ID (COORDINATOR + EVALUATOR)
 router.get(
   "/:evaluationId",
   authenticate,
@@ -65,6 +65,19 @@ router.get(
     await evaluationController.getEvaluationById(req, res, next);
   }
 );
-*/
+
+// ========================================
+// ROTAS DE MODIFICAÇÃO
+// ========================================
+
+// Deletar avaliação (EVALUATOR que criou OU COORDINATOR)
+router.delete(
+  "/:evaluationId",
+  authenticate,
+  requireStaff(), // EVALUATOR ou COORDINATOR
+  async (req, res, next) => {
+    await evaluationController.deleteEvaluation(req, res, next);
+  }
+);
 
 export { router as evaluationRoutes };

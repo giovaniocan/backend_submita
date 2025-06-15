@@ -77,3 +77,83 @@ export interface EvaluationCompletedResponseDto {
   totalEvaluations: number; // Total de avaliações necessárias
   completedEvaluations: number; // Total de avaliações já feitas
 }
+
+// DTO para filtros de busca de avaliações
+export interface ListEvaluationsDto {
+  page?: number;
+  limit?: number;
+  articleId?: string; // Filtrar por artigo específico
+  articleVersionId?: string; // Filtrar por versão específica do artigo
+  evaluatorId?: string; // Filtrar por avaliador específico
+  status?: "TO_CORRECTION" | "APPROVED" | "REJECTED"; // Filtrar por status
+  eventId?: string; // Filtrar por evento
+  gradeMin?: number; // Nota mínima (0-10)
+  gradeMax?: number; // Nota máxima (0-10)
+  dateFrom?: Date; // Data inicial
+  dateTo?: Date; // Data final
+}
+
+// DTO para resposta paginada de avaliações
+export interface PaginatedEvaluationsResponseDto {
+  evaluations: EvaluationResponseDto[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  filters: {
+    articleId?: string;
+    articleVersionId?: string;
+    evaluatorId?: string;
+    status?: string;
+    eventId?: string;
+    gradeRange?: { min?: number; max?: number };
+    dateRange?: { from?: Date; to?: Date };
+  };
+  summary?: {
+    averageGrade?: number;
+    statusDistribution: {
+      approved: number;
+      toCorrection: number;
+      rejected: number;
+    };
+    articlesCount?: number;
+    evaluatorsCount?: number;
+  };
+}
+
+// DTO para resposta de múltiplas avaliações
+export interface EvaluationsListResponseDto {
+  evaluations: EvaluationResponseDto[];
+  total: number;
+  articleVersion: {
+    id: string;
+    version: number;
+    article: {
+      id: string;
+      title: string;
+      status: string;
+      event: {
+        id: string;
+        name: string;
+        evaluationType: string;
+      };
+    };
+  };
+  averageGrade?: number;
+  evaluationSummary: {
+    approved: number;
+    toCorrection: number;
+    rejected: number;
+    inProgress: number;
+  };
+}
+
+// DTO para resposta quando avaliação finaliza todas as avaliações do artigo
+export interface EvaluationCompletedResponseDto {
+  evaluation: EvaluationResponseDto;
+  articleFinalized: boolean; // Se o artigo foi finalizado (todas avaliações concluídas)
+  finalGrade?: number; // Nota final calculada (se finalizado)
+  finalStatus: "APPROVED" | "IN_CORRECTION" | "REJECTED" | "IN_EVALUATION"; // Status final (se finalizado)
+  totalEvaluations: number; // Total de avaliações necessárias
+  completedEvaluations: number; // Total de avaliações já feitas
+}

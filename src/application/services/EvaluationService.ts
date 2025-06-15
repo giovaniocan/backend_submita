@@ -16,6 +16,9 @@ import {
   CreateEvaluationDto,
   DeleteEvaluationResponseDto,
   EvaluationCompletedResponseDto,
+  EvaluationResponseDto,
+  ListEvaluationsDto,
+  PaginatedEvaluationsResponseDto,
 } from "../dtos/EvaluationDto";
 
 interface DeleteValidationContext {
@@ -872,5 +875,287 @@ export class EvaluationService {
     (
       EvaluationService.BUSINESS_RULES.DELETE_DEADLINES as any
     ).GENERAL_EVALUATIONS_DAYS = generalDays;
+  }
+
+  //GET METHODS
+
+  async getEvaluationById(
+    evaluationId: string,
+    currentUserId: string,
+    currentUserRole: string
+  ): Promise<EvaluationResponseDto> {
+    // 1️⃣ VALIDAÇÕES BÁSICAS
+    this.validateInputsForGet(evaluationId, currentUserId, currentUserRole);
+
+    // 2️⃣ BUSCAR AVALIAÇÃO COM RELACIONAMENTOS
+    const evaluation = await this.evaluationRepository.findByIdWithRelations(
+      evaluationId
+    );
+
+    if (!evaluation) {
+      throw new AppError("Evaluation not found", 404);
+    }
+
+    // 3️⃣ VERIFICAR PERMISSÕES DE ACESSO
+    this.validateViewPermissions(evaluation, currentUserId, currentUserRole);
+
+    // 4️⃣ RETORNAR RESPOSTA FORMATADA
+    return this.toEvaluationResponse(evaluation);
+  }
+
+  async getEvaluationsWithFilters(
+    filters: ListEvaluationsDto,
+    currentUserId: string,
+    currentUserRole: string
+  ): Promise<PaginatedEvaluationsResponseDto> {
+    // 1️⃣ VALIDAR FILTROS
+    this.validateFilters(filters);
+
+    // 2️⃣ APLICAR REGRAS DE PERMISSÃO AOS FILTROS
+    const secureFilters = this.applyPermissionFilters(
+      filters,
+      currentUserId,
+      currentUserRole
+    );
+
+    // 3️⃣ BUSCAR AVALIAÇÕES
+    const { evaluations, total } =
+      await this.evaluationRepository.findManyWithFilters(secureFilters);
+
+    // 4️⃣ CALCULAR ESTATÍSTICAS (se houver avaliações)
+    const summary =
+      evaluations.length > 0
+        ? this.calculateSummary(evaluations)
+        : this.getEmptySummary();
+
+    // 5️⃣ CALCULAR PAGINAÇÃO
+    const page = filters.page || 1;
+    const limit = filters.limit || 10;
+    const totalPages = Math.ceil(total / limit);
+
+    // 6️⃣ MONTAR RESPOSTA COMPLETA
+    return {
+      evaluations: await Promise.all(
+        evaluations.map((evaluation: Evaluation) =>
+          this.toEvaluationResponse(evaluation)
+        )
+      ),
+      total,
+      page,
+      limit,
+      totalPages,
+      filters: this.buildResponseFilters(secureFilters),
+      summary,
+    };
+  }
+
+  private validateInputsForGet(
+    evaluationId: string,
+    userId: string,
+    userRole: string
+  ): void {
+    if (!evaluationId || !this.isValidUUID(evaluationId)) {
+      throw new AppError("Valid evaluation ID is required", 400);
+    }
+
+    if (!userId || !this.isValidUUID(userId)) {
+      throw new AppError("Valid user ID is required", 400);
+    }
+
+    if (!userRole || !["EVALUATOR", "COORDINATOR"].includes(userRole)) {
+      throw new AppError("Invalid user role for this operation", 403);
+    }
+  }
+
+  private validateViewPermissions(
+    evaluation: any,
+    currentUserId: string,
+    currentUserRole: string
+  ): void {
+    // COORDINATORS podem ver todas as avaliações
+    if (currentUserRole === "COORDINATOR") {
+      return;
+    }
+
+    // EVALUATORS só podem ver suas próprias avaliações
+    if (currentUserRole === "EVALUATOR") {
+      if (evaluation.userId !== currentUserId) {
+        throw new AppError("You can only view your own evaluations", 403);
+      }
+      return;
+    }
+
+    throw new AppError("Insufficient permissions to view evaluations", 403);
+  }
+
+  private validateFilters(filters: ListEvaluationsDto): void {
+    // Validar paginação
+    if (filters.page && filters.page < 1) {
+      throw new AppError("Page must be greater than 0", 400);
+    }
+
+    if (filters.limit && (filters.limit < 1 || filters.limit > 100)) {
+      throw new AppError("Limit must be between 1 and 100", 400);
+    }
+
+    // Validar grades
+    if (
+      filters.gradeMin !== undefined &&
+      (filters.gradeMin < 0 || filters.gradeMin > 10)
+    ) {
+      throw new AppError("Grade min must be between 0 and 10", 400);
+    }
+
+    if (
+      filters.gradeMax !== undefined &&
+      (filters.gradeMax < 0 || filters.gradeMax > 10)
+    ) {
+      throw new AppError("Grade max must be between 0 and 10", 400);
+    }
+
+    if (
+      filters.gradeMin !== undefined &&
+      filters.gradeMax !== undefined &&
+      filters.gradeMin > filters.gradeMax
+    ) {
+      throw new AppError("Grade min cannot be greater than grade max", 400);
+    }
+
+    // Validar UUIDs se fornecidos
+    const uuidFields = [
+      "articleId",
+      "articleVersionId",
+      "evaluatorId",
+      "eventId",
+    ];
+    for (const field of uuidFields) {
+      const value = filters[field as keyof ListEvaluationsDto] as string;
+      if (value && !this.isValidUUID(value)) {
+        throw new AppError(`Invalid ${field} format`, 400);
+      }
+    }
+
+    // Validar datas
+    if (
+      filters.dateFrom &&
+      filters.dateTo &&
+      filters.dateFrom > filters.dateTo
+    ) {
+      throw new AppError("Date from cannot be greater than date to", 400);
+    }
+
+    // Validar status
+    if (
+      filters.status &&
+      !["TO_CORRECTION", "APPROVED", "REJECTED"].includes(filters.status)
+    ) {
+      throw new AppError("Invalid status filter", 400);
+    }
+  }
+
+  private applyPermissionFilters(
+    filters: ListEvaluationsDto,
+    currentUserId: string,
+    currentUserRole: string
+  ): ListEvaluationsDto {
+    const secureFilters = { ...filters };
+
+    // EVALUATORS só podem ver suas próprias avaliações
+    if (currentUserRole === "EVALUATOR") {
+      secureFilters.evaluatorId = currentUserId;
+    }
+
+    // COORDINATORS podem ver todas (sem restrições adicionais)
+    return secureFilters;
+  }
+
+  // ========================================
+  // MÉTODOS PRIVADOS DE CÁLCULO
+  // ========================================
+
+  private calculateSummary(evaluations: any[]): {
+    averageGrade: number;
+    statusDistribution: {
+      approved: number;
+      toCorrection: number;
+      rejected: number;
+    };
+    articlesCount: number;
+    evaluatorsCount: number;
+  } {
+    // Calcular média das notas
+    const totalGrade = evaluations.reduce(
+      (sum, evaluation: Evaluation) => sum + evaluation.grade,
+      0
+    );
+    const averageGrade =
+      Math.round((totalGrade / evaluations.length) * 10) / 10;
+
+    // Contar status
+    const statusDistribution = {
+      approved: evaluations.filter((e) => e.status === "APPROVED").length,
+      toCorrection: evaluations.filter((e) => e.status === "TO_CORRECTION")
+        .length,
+      rejected: evaluations.filter((e) => e.status === "REJECTED").length,
+    };
+
+    // Contar artigos únicos
+    const uniqueArticles = new Set(
+      evaluations.map((e) => e.articleVersion?.article?.id).filter(Boolean)
+    );
+    const articlesCount = uniqueArticles.size;
+
+    // Contar avaliadores únicos
+    const uniqueEvaluators = new Set(
+      evaluations.map((e) => e.userId).filter(Boolean)
+    );
+    const evaluatorsCount = uniqueEvaluators.size;
+
+    return {
+      averageGrade,
+      statusDistribution,
+      articlesCount,
+      evaluatorsCount,
+    };
+  }
+
+  private getEmptySummary() {
+    return {
+      averageGrade: 0,
+      statusDistribution: {
+        approved: 0,
+        toCorrection: 0,
+        rejected: 0,
+      },
+      articlesCount: 0,
+      evaluatorsCount: 0,
+    };
+  }
+
+  private buildResponseFilters(filters: ListEvaluationsDto) {
+    const responseFilters: any = {};
+
+    if (filters.articleId) responseFilters.articleId = filters.articleId;
+    if (filters.articleVersionId)
+      responseFilters.articleVersionId = filters.articleVersionId;
+    if (filters.evaluatorId) responseFilters.evaluatorId = filters.evaluatorId;
+    if (filters.status) responseFilters.status = filters.status;
+    if (filters.eventId) responseFilters.eventId = filters.eventId;
+
+    if (filters.gradeMin !== undefined || filters.gradeMax !== undefined) {
+      responseFilters.gradeRange = {
+        min: filters.gradeMin,
+        max: filters.gradeMax,
+      };
+    }
+
+    if (filters.dateFrom || filters.dateTo) {
+      responseFilters.dateRange = {
+        from: filters.dateFrom,
+        to: filters.dateTo,
+      };
+    }
+
+    return responseFilters;
   }
 }
