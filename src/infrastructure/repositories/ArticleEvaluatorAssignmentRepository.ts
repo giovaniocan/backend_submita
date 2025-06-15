@@ -196,6 +196,77 @@ export class ArticleEvaluatorAssignmentRepository {
     return await this.delete(assignment.id);
   }
 
+  // Marcar assignment como corrigido por artigo e eventEvaluatorId
+  async markAsCorrectedByArticleIdAndEventEvaluatorId(
+    articleId: string,
+    eventEvaluatorId: string
+  ): Promise<ArticleEvaluatorAssignment> {
+    try {
+      const assignment = await prisma.articleEvaluatorAssignment.updateMany({
+        where: {
+          articleId,
+          eventEvaluatorId,
+        },
+        data: {
+          isCorrected: true,
+        },
+      });
+
+      console.log(
+        `✅ Assignment marked as corrected for article ${articleId} and eventEvaluator ${eventEvaluatorId}`
+      );
+
+      // Retornar o assignment atualizado
+      const updatedAssignment =
+        await prisma.articleEvaluatorAssignment.findFirst({
+          where: {
+            articleId,
+            eventEvaluatorId,
+          },
+        });
+
+      return updatedAssignment!;
+    } catch (error) {
+      console.error("❌ Error marking assignment as corrected:", error);
+      throw new Error("Failed to mark assignment as corrected");
+    }
+  }
+
+  async markAsUncorrectedByArticleAndUser(
+    articleId: string,
+    userId: string
+  ): Promise<ArticleEvaluatorAssignment> {
+    try {
+      const assignment = await prisma.articleEvaluatorAssignment.updateMany({
+        where: {
+          articleId,
+          userId,
+        },
+        data: {
+          isCorrected: false, // Marca como NÃO corrigido
+        },
+      });
+
+      console.log(
+        `✅ Assignment marked as uncorrected for article ${articleId} and user ${userId}`
+      );
+
+      // Retornar o assignment atualizado
+      const updatedAssignment =
+        await prisma.articleEvaluatorAssignment.findFirst({
+          where: {
+            articleId,
+            userId,
+          },
+        });
+
+      return updatedAssignment!;
+    } catch (error) {
+      console.error("❌ Error marking assignment as uncorrected:", error);
+      throw new Error("Failed to mark assignment as uncorrected");
+    }
+  }
+
   // ========================================
   // UTILITIES
   // ========================================
