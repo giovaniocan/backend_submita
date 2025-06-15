@@ -1,6 +1,7 @@
 // src/infrastructure/repositories/ArticleRepository.ts
 
-import { Article, ArticleStatus } from "../../generated/prisma";
+
+import { Article, ArticleStatus, ArticleEvaluatorAssignment } from "../../generated/prisma";
 import { prisma } from "../../lib/prisma";
 
 interface CreateArticleData {
@@ -24,7 +25,7 @@ export class ArticleRepository {
   // ========================================
   async create(articleData: CreateArticleData): Promise<Article> {
     return await prisma.article.create({
-      data: articleData,
+      data: articleData
     });
   }
 
@@ -45,6 +46,39 @@ export class ArticleRepository {
       where: {
         id,
         isActive: true,
+      },
+    });
+  }
+
+  // Buscar artigo ativo por ID de evento
+  async findByEventId(eventId: string): Promise<(Article)[]> {
+    return await prisma.article.findMany({
+      where: {
+        eventId,
+        isActive: true,
+      },
+    });
+  }
+
+  async findByEventIdAndStatus(eventId: string, status: ArticleStatus): Promise<(Article)[]> {
+    return await prisma.article.findMany({
+      where: {
+        eventId,
+        status,
+        isActive: true,
+      },
+    });
+  }
+
+  async findArticlesPending(eventId: string): Promise<(Article)[]> {
+    return await prisma.article.findMany({
+      where: {
+        eventId,
+        status: 'SUBMITTED',
+        isActive: true,
+        evaluatorAssignments: {
+          none: {}, // Nenhuma entrada na tabela de junção
+        },
       },
     });
   }
