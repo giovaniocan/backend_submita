@@ -1,5 +1,13 @@
 // src/application/dtos/EvaluationDto.ts
 
+import {
+  Article,
+  ArticleVersion,
+  Evaluation,
+  User,
+  Event,
+} from "../../generated/prisma";
+
 // DTO para criação de avaliação
 export interface CreateEvaluationDto {
   grade: number; // 0-10
@@ -78,7 +86,6 @@ export interface EvaluationCompletedResponseDto {
   completedEvaluations: number; // Total de avaliações já feitas
 }
 
-// DTO para filtros de busca de avaliações
 export interface ListEvaluationsDto {
   page?: number;
   limit?: number;
@@ -93,7 +100,6 @@ export interface ListEvaluationsDto {
   dateTo?: Date; // Data final
 }
 
-// DTO para resposta paginada de avaliações
 export interface PaginatedEvaluationsResponseDto {
   evaluations: EvaluationResponseDto[];
   total: number;
@@ -157,3 +163,32 @@ export interface EvaluationCompletedResponseDto {
   totalEvaluations: number; // Total de avaliações necessárias
   completedEvaluations: number; // Total de avaliações já feitas
 }
+
+export interface UpdateEvaluationDto {
+  grade?: number; // 0-10
+  evaluationDescription?: string;
+  status?: "TO_CORRECTION" | "APPROVED" | "REJECTED";
+}
+
+// DTO para resposta de avaliação atualizada
+export interface UpdateEvaluationResponseDto {
+  evaluation: EvaluationResponseDto;
+  articleUpdated: boolean; // Se o status do artigo foi recalculado
+  newArticleStatus?: string; // Novo status do artigo (se mudou)
+  recalculationTriggered: boolean; // Se houve recálculo
+  statusChangeWindow: {
+    allowed: boolean;
+  };
+}
+
+export type EvaluationWithContext = Evaluation & {
+  user: Pick<User, "id" | "name" | "email" | "role">;
+  articleVersion: ArticleVersion & {
+    article: Article & {
+      event: Pick<
+        Event,
+        "id" | "name" | "evaluationType" | "eventStartDate" | "eventEndDate"
+      >;
+    };
+  };
+};

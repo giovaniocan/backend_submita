@@ -1,6 +1,7 @@
 import {
   CreateEvaluationDto,
   ListEvaluationsDto,
+  UpdateEvaluationDto,
 } from "../../application/dtos/EvaluationDto";
 import { Evaluation, EvaluationStatus } from "../../generated/prisma";
 import { prisma } from "../../lib/prisma";
@@ -26,6 +27,97 @@ export class EvaluationRepository {
         userId: data.userId,
         articleVersionId: data.articleVersionId,
       },
+    });
+  }
+
+  async updateEvaluation(
+    evaluationId: string,
+    updateData: UpdateEvaluationDto
+  ): Promise<any> {
+    const dataToUpdate: any = {};
+
+    // Só adicionar campos que foram fornecidos
+    if (updateData.grade !== undefined) {
+      dataToUpdate.grade = updateData.grade;
+    }
+
+    if (updateData.evaluationDescription !== undefined) {
+      dataToUpdate.evaluationDescription = updateData.evaluationDescription;
+    }
+
+    if (updateData.status !== undefined) {
+      dataToUpdate.status = updateData.status;
+    }
+
+    try {
+      const updatedEvaluation = await prisma.evaluation.update({
+        where: { id: evaluationId },
+        data: dataToUpdate,
+        include: this.buildIncludeRelations(),
+      });
+
+      console.log(`✅ Evaluation ${evaluationId} updated successfully`);
+      return updatedEvaluation;
+    } catch (error) {
+      console.error("❌ Error updating evaluation:", error);
+      throw new Error("Failed to update evaluation");
+    }
+  }
+
+  // ========================================
+  // GET EVALUATION WITH ARTICLE CONTEXT
+  // ========================================
+  async findByIdWithArticleContext(evaluationId: string): Promise<any> {
+    return await prisma.evaluation.findUnique({
+      where: { id: evaluationId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+        articleVersion: {
+          include: {
+            article: {
+              include: {
+                event: {
+                  select: {
+                    id: true,
+                    name: true,
+                    evaluationType: true,
+                    eventStartDate: true,
+                    eventEndDate: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  // ========================================
+  // GET ALL EVALUATIONS FOR ARTICLE VERSION (for recalculation)
+  // ========================================
+  async getAllEvaluationsForRecalculation(
+    articleVersionId: string
+  ): Promise<any[]> {
+    return await prisma.evaluation.findMany({
+      where: { articleVersionId },
+      select: {
+        id: true,
+        status: true,
+        grade: true,
+        userId: true,
+        evaluationDate: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { evaluationDate: "asc" },
     });
   }
 

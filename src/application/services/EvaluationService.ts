@@ -17,8 +17,11 @@ import {
   DeleteEvaluationResponseDto,
   EvaluationCompletedResponseDto,
   EvaluationResponseDto,
+  EvaluationWithContext,
   ListEvaluationsDto,
   PaginatedEvaluationsResponseDto,
+  UpdateEvaluationDto,
+  UpdateEvaluationResponseDto,
 } from "../dtos/EvaluationDto";
 
 interface DeleteValidationContext {
@@ -168,10 +171,10 @@ export class EvaluationService {
       throw new AppError("Article not found or inactive", 404);
     }
 
-    // Validar se artigo está com status SUBMITTED
-    if (article.status !== "SUBMITTED") {
+    // Validar se artigo está com status SUBMITTED ou IN_EVALUATION
+    if (article.status !== "SUBMITTED" && article.status !== "IN_EVALUATION") {
       throw new AppError(
-        `Article cannot be evaluated. Current status: ${article.status}. Only articles with status SUBMITTED can be evaluated.`,
+        `Article cannot be evaluated. Current status: ${article.status}. Only articles with status SUBMITTED or IN_EVALUATION can be evaluated.`,
         400
       );
     }
@@ -1157,5 +1160,121 @@ export class EvaluationService {
     }
 
     return responseFilters;
+  }
+
+  // ========================================
+  // MÉTODOS PARA ATUALIZAR AVALIAÇÕES
+  // ========================================
+
+  async updateEvaluation(
+    evaluationId: string,
+    updateData: UpdateEvaluationDto,
+    currentUserId: string,
+    currentUserRole: string
+  ): Promise<UpdateEvaluationResponseDto> {
+    // 1️⃣ BUSCAR AVALIAÇÃO E CONTEXTO
+    const evaluation =
+      await this.evaluationRepository.findByIdWithArticleContext(evaluationId);
+    if (!evaluation) {
+      throw new AppError("Evaluation not found", 404);
+    }
+
+    // 2️⃣ VERIFICAR PERMISSÕES
+    if (
+      currentUserRole === "EVALUATOR" &&
+      evaluation.userId !== currentUserId
+    ) {
+      throw new AppError("You can only update your own evaluations", 403);
+    }
+
+    // 3️⃣ VERIFICAR SE PODE MUDAR STATUS
+    const isChangingStatus =
+      updateData.status && updateData.status !== evaluation.status;
+    if (isChangingStatus) {
+      this.validateStatusChange(evaluation);
+    }
+
+    // 4️⃣ ATUALIZAR AVALIAÇÃO
+    const updatedEvaluation = await this.evaluationRepository.updateEvaluation(
+      evaluationId,
+      updateData
+    );
+
+    // 5️⃣ RECALCULAR ARTIGO SE NECESSÁRIO
+    let articleUpdated = false;
+    let newArticleStatus: string | undefined;
+
+    if (isChangingStatus) {
+      const result = await this.recalculateArticleStatus(
+        evaluation.articleVersion.articleId
+      );
+      articleUpdated = result.statusChanged;
+      newArticleStatus = result.newStatus;
+    }
+
+    return {
+      evaluation: await this.toEvaluationResponse(updatedEvaluation),
+      articleUpdated,
+      newArticleStatus,
+      recalculationTriggered: !!isChangingStatus,
+      statusChangeWindow: { allowed: true },
+    };
+  }
+
+  private validateStatusChange(evaluation: EvaluationWithContext): void {
+    const article = evaluation.articleVersion.article;
+    const finalizedStatuses: Article["status"][] = [
+      "APPROVED",
+      "REJECTED",
+      "IN_CORRECTION",
+    ];
+
+    // Se artigo não está finalizado, pode mudar
+    if (!finalizedStatuses.includes(article.status)) {
+      return;
+    }
+
+    // Se está finalizado, verificar 24h
+    const hoursSince =
+      (Date.now() - evaluation.evaluationDate.getTime()) / (1000 * 60 * 60);
+    if (hoursSince > 24) {
+      throw new AppError(
+        "Cannot change status after 24 hours of article finalization",
+        400
+      );
+    }
+  }
+
+  private async recalculateArticleStatus(
+    articleId: string
+  ): Promise<{ statusChanged: boolean; newStatus?: string }> {
+    // Buscar todas as avaliações da versão atual
+    const articleVersion =
+      await this.articleVersionRepository.findLatestByArticleId(articleId);
+    if (!articleVersion) {
+      return { statusChanged: false };
+    }
+
+    const evaluations =
+      await this.evaluationRepository.getEvaluationsByArticleVersionId(
+        articleVersion.id
+      );
+
+    // Calcular novo status
+    const newStatus = this.calculateFinalStatus(evaluations);
+
+    // Buscar status atual do artigo
+    const currentArticle = await this.articleRepository.findById(articleId);
+    if (!currentArticle || currentArticle.status === newStatus) {
+      return { statusChanged: false };
+    }
+
+    // Atualizar status do artigo
+    await this.articleRepository.updateStatus(articleId, newStatus);
+
+    return {
+      statusChanged: true,
+      newStatus,
+    };
   }
 }
