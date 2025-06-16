@@ -3,6 +3,7 @@ import { EvaluationService } from "../../application/services/EvaluationService"
 import {
   CreateEvaluationDto,
   ListEvaluationsDto,
+  UpdateEvaluationDto,
 } from "../../application/dtos/EvaluationDto";
 import { ApiResponse } from "../../shared/utils/response";
 import { AppError } from "../../shared/errors/AppError";
@@ -349,6 +350,8 @@ export class EvaluationController {
         user.role
       );
 
+      console.log("Result:", result);
+
       res
         .status(200)
         .json(
@@ -447,6 +450,82 @@ export class EvaluationController {
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(uuid);
+  }
+
+  async updateEvaluation(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const user = req.user;
+      if (!user) {
+        res.status(401).json(ApiResponse.error("User not authenticated", 401));
+        return;
+      }
+
+      const { evaluationId } = req.params;
+      if (!evaluationId || !this.isValidUUID(evaluationId)) {
+        res
+          .status(400)
+          .json(ApiResponse.error("Valid evaluation ID required", 400));
+        return;
+      }
+
+      // Extrair dados de atualização
+      const updateData: UpdateEvaluationDto = {};
+
+      if (req.body.grade !== undefined) {
+        const grade = Number(req.body.grade);
+        if (isNaN(grade) || grade < 0 || grade > 10) {
+          res
+            .status(400)
+            .json(ApiResponse.error("Grade must be between 0 and 10", 400));
+          return;
+        }
+        updateData.grade = grade;
+      }
+
+      if (req.body.evaluationDescription !== undefined) {
+        updateData.evaluationDescription =
+          req.body.evaluationDescription.trim();
+      }
+
+      if (req.body.status) {
+        const validStatuses = ["TO_CORRECTION", "APPROVED", "REJECTED"];
+        if (!validStatuses.includes(req.body.status)) {
+          res.status(400).json(ApiResponse.error("Invalid status", 400));
+          return;
+        }
+        updateData.status = req.body.status;
+      }
+
+      // Verificar se há dados para atualizar
+      if (Object.keys(updateData).length === 0) {
+        res
+          .status(400)
+          .json(ApiResponse.error("No data provided for update", 400));
+        return;
+      }
+
+      // Chamar service
+      const result = await this.evaluationService.updateEvaluation(
+        evaluationId,
+        updateData,
+        user.id,
+        user.role
+      );
+
+      // Mensagem simples
+      let message = "Evaluation updated successfully!";
+      if (result.articleUpdated) {
+        message += ` Article status updated to ${result.newArticleStatus}`;
+      }
+
+      res.status(200).json(ApiResponse.success(result, message));
+    } catch (error) {
+      this.handleError(error, res, "Update evaluation error");
+    }
   }
 
   private handleError(error: unknown, res: Response, context: string): void {

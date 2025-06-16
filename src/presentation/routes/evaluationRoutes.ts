@@ -80,4 +80,13 @@ router.delete(
   }
 );
 
+router.put(
+  "/:evaluationId",
+  authenticate,
+  requireStaff(), // EVALUATOR ou COORDINATOR
+  async (req, res, next) => {
+    await evaluationController.updateEvaluation(req, res, next);
+  }
+);
+
 export { router as evaluationRoutes };
