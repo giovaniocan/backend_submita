@@ -9,6 +9,7 @@ import { testEmailRoutes } from "./testEmailRoutes";
 import { articleRoutes } from "./articleRoutes";
 import { evaluationRoutes } from "./evaluationRoutes";
 import { dashboardRoutes } from "./dashboardRoutes";
+import { questionResponseRoutes } from "./questionResponseRoutes";
 
 const router = Router();
 
@@ -23,6 +24,8 @@ router.use("/files", fileUploadRoutes);
 router.use("/checklists", checklistRoutes);
 
 router.use("/evaluations", evaluationRoutes);
+
+router.use("/question-responses", questionResponseRoutes);
 
 // Rota de teste de email
 router.use("/email", testEmailRoutes);

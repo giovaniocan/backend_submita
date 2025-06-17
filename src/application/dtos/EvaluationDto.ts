@@ -4,8 +4,8 @@ import {
   Article,
   ArticleVersion,
   Evaluation,
-  User,
   Event,
+  User,
 } from "../../generated/prisma";
 
 // DTO para criação de avaliação
@@ -14,6 +14,13 @@ export interface CreateEvaluationDto {
   evaluationDescription?: string; // Comentário/descrição da avaliação (opcional)
   articleVersionId: string; // ID da versão do artigo sendo avaliada
   status: "TO_CORRECTION" | "APPROVED" | "REJECTED";
+
+  checklistResponses?: Array<{
+    questionId: string;
+    booleanResponse?: boolean;
+    scaleResponse?: number;
+    textResponse?: string;
+  }>;
 }
 
 // DTO para resposta de avaliação criada
@@ -49,6 +56,19 @@ export interface EvaluationResponseDto {
       };
     };
   };
+
+  checklistResponses?: Array<{
+    id: string;
+    questionId: string;
+    booleanResponse?: boolean;
+    scaleResponse?: number;
+    textResponse?: string;
+    question: {
+      description: string;
+      type: "YES_NO" | "SCALE" | "TEXT";
+      order: number;
+    };
+  }> | null;
 }
 
 export interface DeleteEvaluationResponseDto {
@@ -75,6 +95,18 @@ export interface DeleteEvaluationResponseDto {
     requiresReassignment: boolean; // Se artigo ficou sem avaliações (voltou para SUBMITTED)
   };
 }
+
+export type EvaluationWithContext = Evaluation & {
+  user: Pick<User, "id" | "name" | "email" | "role">;
+  articleVersion: ArticleVersion & {
+    article: Article & {
+      event: Pick<
+        Event,
+        "id" | "name" | "evaluationType" | "eventStartDate" | "eventEndDate"
+      >;
+    };
+  };
+};
 
 // DTO para resposta quando avaliação finaliza todas as avaliações do artigo
 export interface EvaluationCompletedResponseDto {
@@ -180,15 +212,3 @@ export interface UpdateEvaluationResponseDto {
     allowed: boolean;
   };
 }
-
-export type EvaluationWithContext = Evaluation & {
-  user: Pick<User, "id" | "name" | "email" | "role">;
-  articleVersion: ArticleVersion & {
-    article: Article & {
-      event: Pick<
-        Event,
-        "id" | "name" | "evaluationType" | "eventStartDate" | "eventEndDate"
-      >;
-    };
-  };
-};

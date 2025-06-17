@@ -27,6 +27,37 @@ export class EvaluationRepository {
         userId: data.userId,
         articleVersionId: data.articleVersionId,
       },
+      // ✅ INCLUIR dados relacionados simples
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        articleVersion: {
+          select: {
+            id: true,
+            version: true,
+            article: {
+              select: {
+                id: true,
+                title: true,
+                status: true,
+                evaluationsDone: true,
+                event: {
+                  select: {
+                    id: true,
+                    name: true,
+                    evaluationType: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
   }
 

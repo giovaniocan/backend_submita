@@ -26,6 +26,7 @@ export class EvaluationController {
         grade,
         evaluationDescription,
         status,
+        checklistResponses,
       }: CreateEvaluationDto = req.body;
       const user = req.user;
 
@@ -71,11 +72,89 @@ export class EvaluationController {
         return;
       }
 
+      // ✅ ADICIONAR: Validações do checklist (opcional)
+      if (checklistResponses) {
+        if (!Array.isArray(checklistResponses)) {
+          res
+            .status(400)
+            .json(
+              ApiResponse.error("Checklist responses must be an array", 400)
+            );
+          return;
+        }
+
+        for (const [index, response] of checklistResponses.entries()) {
+          if (!response.questionId) {
+            res
+              .status(400)
+              .json(
+                ApiResponse.error(
+                  `Checklist response ${index + 1}: Question ID is required`,
+                  400
+                )
+              );
+            return;
+          }
+
+          const responseValues = [
+            response.booleanResponse,
+            response.scaleResponse,
+            response.textResponse,
+          ].filter((r) => r !== undefined && r !== null && r !== "");
+
+          if (responseValues.length === 0) {
+            res
+              .status(400)
+              .json(
+                ApiResponse.error(
+                  `Checklist response ${
+                    index + 1
+                  }: At least one response value is required`,
+                  400
+                )
+              );
+            return;
+          }
+
+          if (responseValues.length > 1) {
+            res
+              .status(400)
+              .json(
+                ApiResponse.error(
+                  `Checklist response ${
+                    index + 1
+                  }: Only one type of response can be provided`,
+                  400
+                )
+              );
+            return;
+          }
+
+          if (
+            response.scaleResponse !== undefined &&
+            (response.scaleResponse < 1 || response.scaleResponse > 5)
+          ) {
+            res
+              .status(400)
+              .json(
+                ApiResponse.error(
+                  `Checklist response ${
+                    index + 1
+                  }: Scale response must be between 1 and 5`,
+                  400
+                )
+              );
+            return;
+          }
+        }
+      }
+
       const evaluationData: CreateEvaluationDto = {
         grade: Number(grade), // Garantir que é número
         evaluationDescription: evaluationDescription?.trim() || undefined,
         articleVersionId: articleVersionId.trim(),
         status: status,
+        checklistResponses,
       };
 
       // 5️⃣ CHAMAR O SERVICE (passa o userId do token)
