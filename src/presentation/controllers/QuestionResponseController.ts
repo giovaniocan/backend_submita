@@ -439,6 +439,55 @@ export class QuestionResponseController {
       this.handleError(error, res, "Update multiple question responses error");
     }
   }
+
+  async deleteQuestionResponse(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      console.log("CHEGOU AQUI PELO MENOS");
+      const user = req.user;
+      if (!user) {
+        res.status(401).json(ApiResponse.error("User not authenticated", 401));
+        return;
+      }
+
+      const { responseId } = req.params;
+
+      console.log("ID DA RESPOSTA", responseId);
+      // ========================================pqest
+      // VALIDAÇÕES BÁSICAS
+      // ========================================
+      if (!responseId) {
+        res.status(400).json(ApiResponse.error("Response ID is required", 400));
+        return;
+      }
+
+      if (!this.isValidUUID(responseId)) {
+        res
+          .status(400)
+          .json(ApiResponse.error("Invalid Response ID format", 400));
+        return;
+      }
+
+      // ========================================
+      // CHAMAR SERVICE
+      // ========================================
+      const result = await this.questionResponseService.deleteQuestionResponse(
+        responseId,
+        user.id
+      );
+
+      // ========================================
+      // RESPOSTA DE SUCESSO
+      // ========================================
+      res.status(200).json(ApiResponse.success(result, result.message));
+    } catch (error) {
+      this.handleError(error, res, "Delete question response error");
+    }
+  }
+
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================

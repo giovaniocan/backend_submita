@@ -104,3 +104,19 @@ export interface UpdateMultipleQuestionResponsesResponseDto {
     totalErrors: number;
   };
 }
+
+export interface DeleteQuestionResponseDto {
+  deletedResponse: {
+    id: string;
+    questionId: string;
+    articleVersionId: string;
+    deletedAt: Date;
+    question: {
+      description: string;
+      type: "YES_NO" | "SCALE" | "TEXT";
+      order: number;
+      isRequired: boolean;
+    };
+  };
+  message: string;
+}

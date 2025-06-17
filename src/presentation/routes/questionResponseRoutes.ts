@@ -20,4 +20,13 @@ router.put("/", authenticate, requireEvaluator(), async (req, res, next) => {
   );
 });
 
+router.delete(
+  "/:responseId",
+  authenticate,
+  requireEvaluator(),
+  async (req, res, next) => {
+    await questionResponseController.deleteQuestionResponse(req, res, next);
+  }
+);
+
 export { router as questionResponseRoutes };

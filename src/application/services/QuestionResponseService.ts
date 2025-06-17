@@ -14,6 +14,7 @@ import {
   QuestionResponseDto,
   UpdateMultipleQuestionResponsesDto,
   UpdateMultipleQuestionResponsesResponseDto,
+  DeleteQuestionResponseDto,
 } from "../dtos/QuestionResponseDto";
 import { QuestionResponse, Question, Prisma } from "../../generated/prisma";
 
@@ -259,6 +260,91 @@ export class QuestionResponseService {
     return { updated, errors, summary };
   }
 
+  async deleteQuestionResponse(
+    responseId: string,
+    userId: string
+  ): Promise<DeleteQuestionResponseDto> {
+    // 1️⃣ VALIDAÇÕES INICIAIS
+    this.validateUserId(userId);
+
+    if (!responseId || !this.isValidUUID(responseId)) {
+      throw new AppError("Valid response ID is required", 400);
+    }
+
+    // 2️⃣ BUSCAR RESPOSTA COM TODOS OS RELACIONAMENTOS
+    const existingResponse =
+      await this.questionResponseRepository.findByIdWithRelations(responseId);
+
+    if (!existingResponse) {
+      throw new AppError("Question response not found", 404);
+    }
+
+    // 3️⃣ VERIFICAR SE É DO PRÓPRIO USUÁRIO
+    if (existingResponse.userId !== userId) {
+      throw new AppError("You can only delete your own responses", 403);
+    }
+
+    // 4️⃣ VERIFICAR SE A PERGUNTA É OBRIGATÓRIA
+    if (existingResponse.question.isRequired) {
+      throw new AppError(
+        "Cannot delete response to required question. Please edit the response instead of deleting it.",
+        400
+      );
+    }
+
+    // 5️⃣ VERIFICAR SE ARTIGO AINDA ESTÁ EM AVALIAÇÃO
+    const articleVersion = await this.articleVersionRepository.findById(
+      existingResponse.articleVersionId
+    );
+
+    if (!articleVersion) {
+      throw new AppError("Article version not found", 404);
+    }
+
+    const article = await this.articleRepository.findActiveById(
+      articleVersion.articleId
+    );
+
+    if (!article) {
+      throw new AppError("Article not found or inactive", 404);
+    }
+
+    // 6️⃣ VALIDAR STATUS DO ARTIGO
+    const allowedStatuses = ["SUBMITTED", "IN_EVALUATION"];
+    if (!allowedStatuses.includes(article.status)) {
+      throw new AppError(
+        `Cannot delete response. Article status is ${article.status}. Responses can only be deleted when article is SUBMITTED or IN_EVALUATION.`,
+        400
+      );
+    }
+
+    // 7️⃣ EXECUTAR DELEÇÃO
+    try {
+      await this.questionResponseRepository.deleteById(responseId);
+
+      // 8️⃣ MONTAR RESPOSTA
+      const response: DeleteQuestionResponseDto = {
+        deletedResponse: {
+          id: existingResponse.id,
+          questionId: existingResponse.questionId,
+          articleVersionId: existingResponse.articleVersionId,
+          deletedAt: new Date(),
+          question: {
+            description: existingResponse.question.description,
+            type: existingResponse.question.type as "YES_NO" | "SCALE" | "TEXT",
+            order: existingResponse.question.order,
+            isRequired: existingResponse.question.isRequired,
+          },
+        },
+        message: `Response to optional question "${existingResponse.question.description}" deleted successfully`,
+      };
+
+      return response;
+    } catch (error) {
+      console.error("❌ Error deleting question response:", error);
+      throw new AppError("Failed to delete question response", 500);
+    }
+  }
   // ========================================
   // MÉTODO AUXILIAR SIMPLIFICADO
   // ========================================
