@@ -120,3 +120,20 @@ export interface DeleteQuestionResponseDto {
   };
   message: string;
 }
+
+export interface ClearAllChecklistResponsesDto {
+  clearedResponses: {
+    total: number;
+    required: number;
+    optional: number;
+    articleVersionId: string;
+    clearedAt: Date;
+  };
+  resetInfo: {
+    articleTitle: string;
+    articleVersion: number;
+    eventName: string;
+    checklistName?: string;
+  };
+  message: string;
+}

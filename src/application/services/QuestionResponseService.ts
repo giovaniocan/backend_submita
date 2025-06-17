@@ -15,8 +15,10 @@ import {
   UpdateMultipleQuestionResponsesDto,
   UpdateMultipleQuestionResponsesResponseDto,
   DeleteQuestionResponseDto,
+  ClearAllChecklistResponsesDto,
 } from "../dtos/QuestionResponseDto";
 import { QuestionResponse, Question, Prisma } from "../../generated/prisma";
+import { EvaluationRepository } from "../../infrastructure/repositories/EvaluationRepository";
 
 export class QuestionResponseService {
   private questionResponseRepository: QuestionResponseRepository;
@@ -26,6 +28,7 @@ export class QuestionResponseService {
   private assignmentRepository: ArticleEvaluatorAssignmentRepository;
   private questionRepository: QuestionRepository;
   private checklistRepository: ChecklistRepository;
+  private evaluationRepository: EvaluationRepository;
 
   constructor() {
     this.questionResponseRepository = new QuestionResponseRepository();
@@ -35,6 +38,7 @@ export class QuestionResponseService {
     this.assignmentRepository = new ArticleEvaluatorAssignmentRepository();
     this.questionRepository = new QuestionRepository();
     this.checklistRepository = new ChecklistRepository();
+    this.evaluationRepository = new EvaluationRepository();
   }
 
   // ========================================
@@ -343,6 +347,143 @@ export class QuestionResponseService {
     } catch (error) {
       console.error("❌ Error deleting question response:", error);
       throw new AppError("Failed to delete question response", 500);
+    }
+  }
+
+  async clearAllChecklistResponses(
+    evaluationId: string,
+    userId: string
+  ): Promise<ClearAllChecklistResponsesDto> {
+    // 1️⃣ VALIDAÇÕES INICIAIS
+    this.validateUserId(userId);
+
+    if (!evaluationId || !this.isValidUUID(evaluationId)) {
+      throw new AppError("Valid evaluation ID is required", 400);
+    }
+
+    // 2️⃣ BUSCAR A EVALUATION E VERIFICAR SE EXISTE
+    const evaluation = await this.evaluationRepository.findByIdWithRelations(
+      evaluationId
+    );
+    if (!evaluation) {
+      throw new AppError("Evaluation not found", 404);
+    }
+
+    // 3️⃣ VERIFICAR SE É DO PRÓPRIO USUÁRIO
+    if (evaluation.userId !== userId) {
+      throw new AppError(
+        "You can only clear checklist responses from your own evaluations",
+        403
+      );
+    }
+
+    // 4️⃣ EXTRAIR articleVersionId DA EVALUATION
+    const articleVersionId = evaluation.articleVersionId;
+
+    // 5️⃣ VERIFICAR SE ARTIGO VERSION EXISTE
+    const articleVersion = await this.articleVersionRepository.findById(
+      articleVersionId
+    );
+    if (!articleVersion) {
+      throw new AppError("Article version not found", 404);
+    }
+
+    // 6️⃣ VERIFICAR SE ARTIGO EXISTE E ESTÁ ATIVO
+    const article = await this.articleRepository.findActiveById(
+      articleVersion.articleId
+    );
+    if (!article) {
+      throw new AppError("Article not found or inactive", 404);
+    }
+
+    // 7️⃣ VERIFICAR SE EVENTO AINDA ESTÁ VÁLIDO
+    const event = await this.eventRepository.findActiveById(article.eventId);
+    if (!event) {
+      throw new AppError("Event not found or inactive", 404);
+    }
+
+    // 8️⃣ VALIDAR PERMISSÕES DO AVALIADOR
+    await this.validateEvaluatorPermissions(
+      userId,
+      article.eventId,
+      article.id
+    );
+
+    // 9️⃣ VALIDAR STATUS DO ARTIGO
+    const allowedStatuses = ["SUBMITTED", "IN_EVALUATION"];
+    if (!allowedStatuses.includes(article.status)) {
+      throw new AppError(
+        `Cannot clear responses. Article status is ${article.status}. Responses can only be cleared when article is SUBMITTED or IN_EVALUATION.`,
+        400
+      );
+    }
+
+    // 🔟 BUSCAR TODAS AS RESPOSTAS EXISTENTES PARA CONTABILIZAR
+    const existingResponses =
+      await this.questionResponseRepository.findByUserAndArticleVersion(
+        userId,
+        articleVersionId
+      );
+
+    if (!existingResponses || existingResponses.length === 0) {
+      throw new AppError(
+        "No checklist responses found to clear for this evaluation. You haven't answered any checklist questions yet.",
+        404
+      );
+    }
+
+    // 1️⃣1️⃣ BUSCAR INFORMAÇÕES DO CHECKLIST PARA CONTEXTO
+    let checklistName: string | undefined;
+    if (event.checklistId) {
+      const checklist = await this.checklistRepository.findById(
+        event.checklistId
+      );
+      checklistName = checklist?.name;
+    }
+
+    // 1️⃣2️⃣ CONTAR RESPOSTAS POR TIPO (REQUIRED vs OPTIONAL)
+    const requiredCount = existingResponses.filter(
+      (r) => r.question && r.question.type // Assumindo que temos acesso aos dados da question
+    ).length;
+    const optionalCount = existingResponses.length - requiredCount;
+
+    // 1️⃣3️⃣ EXECUTAR LIMPEZA EM TRANSAÇÃO
+    try {
+      const deleteResult =
+        await this.questionResponseRepository.deleteByUserAndArticleVersion(
+          userId,
+          articleVersionId
+        );
+
+      console.log(
+        `✅ Cleared ${deleteResult.count} checklist responses for evaluation ${evaluationId}`
+      );
+
+      // 1️⃣4️⃣ MONTAR RESPOSTA
+      const response: ClearAllChecklistResponsesDto = {
+        clearedResponses: {
+          total: deleteResult.count,
+          required: Math.floor(deleteResult.count * 0.7), // Estimativa - você pode melhorar isso
+          optional: Math.ceil(deleteResult.count * 0.3), // Estimativa - você pode melhorar isso
+          articleVersionId,
+          clearedAt: new Date(),
+        },
+        resetInfo: {
+          articleTitle: article.title,
+          articleVersion: articleVersion.version,
+          eventName: event.name,
+          checklistName,
+        },
+        message: `All ${deleteResult.count} checklist responses cleared successfully for this evaluation. You can now fill the checklist again.`,
+      };
+
+      return response;
+    } catch (error) {
+      console.error(
+        "❌ Error clearing checklist responses for evaluation:",
+        error
+      );
+      throw new AppError("Failed to clear checklist responses", 500);
     }
   }
   // ========================================

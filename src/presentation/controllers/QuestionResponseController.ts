@@ -488,6 +488,54 @@ export class QuestionResponseController {
     }
   }
 
+  async clearAllChecklistResponses(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const user = req.user;
+      if (!user) {
+        res.status(401).json(ApiResponse.error("User not authenticated", 401));
+        return;
+      }
+
+      const { evaluationId } = req.params;
+
+      // ========================================
+      // VALIDAÇÕES BÁSICAS
+      // ========================================
+      if (!evaluationId) {
+        res
+          .status(400)
+          .json(ApiResponse.error("EvaluationID is required", 400));
+        return;
+      }
+
+      if (!this.isValidUUID(evaluationId)) {
+        res
+          .status(400)
+          .json(ApiResponse.error("Invalid Evaluation ID format", 400));
+        return;
+      }
+
+      // ========================================
+      // CHAMAR SERVICE
+      // ========================================
+      const result =
+        await this.questionResponseService.clearAllChecklistResponses(
+          evaluationId,
+          user.id
+        );
+
+      // ========================================
+      // RESPOSTA DE SUCESSO
+      // ========================================
+      res.status(200).json(ApiResponse.success(result, result.message));
+    } catch (error) {
+      this.handleError(error, res, "Clear all checklist responses error");
+    }
+  }
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================
