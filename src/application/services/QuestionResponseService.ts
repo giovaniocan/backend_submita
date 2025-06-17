@@ -12,9 +12,10 @@ import {
   SaveChecklistResponsesDto,
   SaveChecklistResponsesResponseDto,
   QuestionResponseDto,
-  MyQuestionResponsesDto,
+  UpdateMultipleQuestionResponsesDto,
+  UpdateMultipleQuestionResponsesResponseDto,
 } from "../dtos/QuestionResponseDto";
-import { QuestionResponse, Question } from "../../generated/prisma";
+import { QuestionResponse, Question, Prisma } from "../../generated/prisma";
 
 export class QuestionResponseService {
   private questionResponseRepository: QuestionResponseRepository;
@@ -118,6 +119,191 @@ export class QuestionResponseService {
     } catch (error) {
       console.warn("Error fetching checklist responses:", error);
       return null; // Se der erro, retorna null (não quebra a evaluation)
+    }
+  }
+
+  async updateMultipleQuestionResponses(
+    updateData: UpdateMultipleQuestionResponsesDto,
+    userId: string
+  ): Promise<UpdateMultipleQuestionResponsesResponseDto> {
+    // 1️⃣ VALIDAÇÃO BÁSICA
+    if (!userId || !this.isValidUUID(userId)) {
+      throw new AppError("Valid user ID is required", 400);
+    }
+
+    const updated: any[] = [];
+    const errors: Array<{ responseId: string; error: string }> = [];
+
+    // 2️⃣ PROCESSAR CADA RESPOSTA
+    for (const responseUpdate of updateData.responses) {
+      try {
+        // Buscar resposta existente
+        const existingResponse =
+          await this.questionResponseRepository.findByIdWithRelations(
+            responseUpdate.responseId
+          );
+
+        console.log("Existing Response", existingResponse);
+
+        if (!existingResponse) {
+          errors.push({
+            responseId: responseUpdate.responseId,
+            error: "Question response not found",
+          });
+          continue;
+        }
+
+        // Verificar se é do próprio usuário
+        if (existingResponse.userId !== userId) {
+          errors.push({
+            responseId: responseUpdate.responseId,
+            error: "You can only edit your own responses",
+          });
+          continue;
+        }
+
+        // Verificar se artigo ainda está em avaliação (apenas uma vez por artigo)
+        const articleVersion = await this.articleVersionRepository.findById(
+          existingResponse.articleVersionId
+        );
+
+        if (!articleVersion?.articleId) {
+          errors.push({
+            responseId: responseUpdate.responseId,
+            error: "Article version does not have a valid articleId",
+          });
+          continue;
+        }
+        const article = await this.articleRepository.findActiveById(
+          articleVersion.articleId
+        );
+
+        if (!article) {
+          errors.push({
+            responseId: responseUpdate.responseId,
+            error: "Article not found or inactive",
+          });
+          continue;
+        }
+
+        const allowedStatuses = ["SUBMITTED", "IN_EVALUATION"];
+        if (!allowedStatuses.includes(article.status)) {
+          errors.push({
+            responseId: responseUpdate.responseId,
+            error: `Cannot edit response. Article status is ${article.status}`,
+          });
+          continue;
+        }
+
+        // Validar tipo da resposta
+        this.validateResponseTypeForUpdate(
+          responseUpdate,
+          existingResponse.question
+        );
+
+        // Atualizar a resposta
+        const updatedResponse = await this.questionResponseRepository.update(
+          responseUpdate.responseId,
+          {
+            booleanResponse: responseUpdate.booleanResponse ?? null,
+            scaleResponse: responseUpdate.scaleResponse ?? null,
+            textResponse: responseUpdate.textResponse ?? null,
+          }
+        );
+
+        // Buscar dados completos
+        const completeResponse =
+          await this.questionResponseRepository.findByIdWithRelations(
+            updatedResponse.id
+          );
+
+        console.log("Complete Response:", completeResponse);
+
+        if (completeResponse) {
+          updated.push({
+            id: completeResponse.id,
+            questionId: completeResponse.questionId,
+            booleanResponse: completeResponse.booleanResponse ?? undefined,
+            scaleResponse: completeResponse.scaleResponse ?? undefined,
+            textResponse: completeResponse.textResponse ?? undefined,
+            updatedAt: completeResponse.updatedAt,
+            question: {
+              description: completeResponse.question.description,
+              type: completeResponse.question.type as
+                | "YES_NO"
+                | "SCALE"
+                | "TEXT",
+              order: completeResponse.question.order,
+            },
+          });
+        }
+      } catch (error) {
+        console.error(
+          `Error updating response ${responseUpdate.responseId}:`,
+          error
+        );
+        errors.push({
+          responseId: responseUpdate.responseId,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    }
+
+    // 3️⃣ MONTAR RESPOSTA
+    const summary = {
+      totalProcessed: updateData.responses.length,
+      totalUpdated: updated.length,
+      totalErrors: errors.length,
+    };
+
+    return { updated, errors, summary };
+  }
+
+  // ========================================
+  // MÉTODO AUXILIAR SIMPLIFICADO
+  // ========================================
+  private validateResponseTypeForUpdate(
+    responseData: any,
+    question: any
+  ): void {
+    const questionType = question.type;
+    console.log("CHEGOU AQUI PELO MENOS", questionType);
+    switch (questionType) {
+      case "YES_NO":
+        if (responseData.booleanResponse === undefined) {
+          throw new AppError("YES_NO questions require boolean response", 400);
+        }
+        break;
+
+      case "SCALE":
+        if (responseData.scaleResponse === undefined) {
+          throw new AppError(
+            "SCALE questions require scale response (1-5)",
+            400
+          );
+        }
+        if (responseData.scaleResponse < 1 || responseData.scaleResponse > 5) {
+          throw new AppError("Scale response must be between 1 and 5", 400);
+        }
+        break;
+
+      case "TEXT":
+        if (
+          !responseData.textResponse ||
+          responseData.textResponse.trim().length === 0
+        ) {
+          throw new AppError("TEXT questions require text response", 400);
+        }
+        if (responseData.textResponse.length > 1000) {
+          throw new AppError(
+            "Text response cannot exceed 1000 characters",
+            400
+          );
+        }
+        break;
+
+      default:
+        throw new AppError(`Invalid question type: ${questionType}`, 400);
     }
   }
 

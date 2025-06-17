@@ -72,102 +72,35 @@ export interface CreateQuestionResponseData {
   textResponse?: string;
 }
 
-// src/application/dtos/QuestionResponseDto.ts
-// ADICIONAR estes DTOs (se ainda não existirem):
-
-// ========================================
-// DTO PARA MINHAS RESPOSTAS POR ARTICLE VERSION
-// ========================================
-export interface MyQuestionResponsesDto {
-  articleId: string;
-  articleVersionId: string;
-  evaluatorId: string;
+export interface UpdateMultipleQuestionResponsesDto {
   responses: Array<{
-    id: string;
-    questionId: string;
-    question: {
-      description: string;
-      type: "YES_NO" | "SCALE" | "TEXT";
-      isRequired: boolean;
-      order: number;
-    };
+    responseId: string;
     booleanResponse?: boolean;
     scaleResponse?: number;
     textResponse?: string;
-    createdAt: Date;
-    updatedAt: Date;
   }>;
-  completionStatus: {
-    isComplete: boolean;
-    percentage: number;
-    answeredRequired: number;
-    totalRequired: number;
-  };
 }
-
-// ========================================
-// DTO PARA RESPOSTA SIMPLIFICADA (USO INTERNO)
-// ========================================
-export interface SimpleQuestionResponseDto {
-  id: string;
-  questionId: string;
-  booleanResponse?: boolean;
-  scaleResponse?: number;
-  textResponse?: string;
-  question: {
+export interface UpdateMultipleQuestionResponsesResponseDto {
+  updated: Array<{
     id: string;
-    description: string;
-    type: "YES_NO" | "SCALE" | "TEXT";
-    isRequired: boolean;
-    order: number;
+    questionId: string;
+    booleanResponse?: boolean;
+    scaleResponse?: number;
+    textResponse?: string;
+    updatedAt: Date;
+    question: {
+      description: string;
+      type: "YES_NO" | "SCALE" | "TEXT";
+      order: number;
+    };
+  }>;
+  errors: Array<{
+    responseId: string;
+    error: string;
+  }>;
+  summary: {
+    totalProcessed: number;
+    totalUpdated: number;
+    totalErrors: number;
   };
-}
-
-// ========================================
-// DTO PARA ESTATÍSTICAS DETALHADAS
-// ========================================
-export interface DetailedStatsDto {
-  totalAnswered: number;
-  byType: {
-    yesNo: number;
-    scale: number;
-    text: number;
-  };
-  byRequired: {
-    required: number;
-    optional: number;
-  };
-  lastAnswered?: Date;
-}
-
-// ========================================
-// DTO PARA RESPOSTAS AGRUPADAS POR AVALIADOR
-// ========================================
-export interface ResponsesByEvaluatorDto {
-  evaluatorId: string;
-  evaluatorName: string;
-  responses: QuestionResponseDto[];
-}
-
-// ========================================
-// DTO PARA ESTATÍSTICAS DE COMPLETUDE ESTENDIDA
-// ========================================
-export interface ExtendedCompletenessStatsDto {
-  totalQuestions: number;
-  requiredQuestions: number;
-  answeredQuestions: number;
-  answeredRequired: number;
-  completionPercentage: number;
-  isComplete: boolean;
-  missingRequired: string[]; // IDs das perguntas obrigatórias não respondidas
-}
-
-// ========================================
-// DTO PARA CONTAGEM POR TIPO DE PERGUNTA
-// ========================================
-export interface QuestionTypeCountDto {
-  yesNo: number;
-  scale: number;
-  text: number;
-  total: number;
 }

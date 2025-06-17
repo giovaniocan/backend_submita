@@ -2,7 +2,10 @@
 
 import { Request, Response, NextFunction } from "express";
 import { QuestionResponseService } from "../../application/services/QuestionResponseService";
-import { SaveChecklistResponsesDto } from "../../application/dtos/QuestionResponseDto";
+import {
+  SaveChecklistResponsesDto,
+  UpdateMultipleQuestionResponsesDto,
+} from "../../application/dtos/QuestionResponseDto";
 import { ApiResponse } from "../../shared/utils/response";
 import { AppError } from "../../shared/errors/AppError";
 
@@ -245,6 +248,197 @@ export class QuestionResponseController {
     }
   }
 
+  async updateMultipleQuestionResponses(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const user = req.user;
+      if (!user) {
+        res.status(401).json(ApiResponse.error("User not authenticated", 401));
+        return;
+      }
+
+      // VALIDAÇÕES BÁSICAS
+      const { responses } = req.body;
+
+      // ========================================
+      // VALIDAÇÕES BÁSICAS
+      // ========================================
+      if (!responses || !Array.isArray(responses) || responses.length === 0) {
+        res
+          .status(400)
+          .json(
+            ApiResponse.error(
+              "Responses array is required and cannot be empty",
+              400
+            )
+          );
+        return;
+      }
+
+      // Validar cada resposta no array
+      for (const [index, response] of responses.entries()) {
+        // Validar responseId
+        if (!response.responseId || !this.isValidUUID(response.responseId)) {
+          res
+            .status(400)
+            .json(
+              ApiResponse.error(
+                `Response ${index + 1}: Valid response ID is required`,
+                400
+              )
+            );
+          return;
+        }
+
+        // Verificar se pelo menos um valor foi fornecido
+        const responseValues = [
+          response.booleanResponse,
+          response.scaleResponse,
+          response.textResponse,
+        ].filter((r) => r !== undefined && r !== null && r !== "");
+
+        if (responseValues.length === 0) {
+          res
+            .status(400)
+            .json(
+              ApiResponse.error(
+                `Response ${
+                  index + 1
+                }: At least one response value is required`,
+                400
+              )
+            );
+          return;
+        }
+
+        if (responseValues.length > 1) {
+          res
+            .status(400)
+            .json(
+              ApiResponse.error(
+                `Response ${
+                  index + 1
+                }: Only one type of response can be provided`,
+                400
+              )
+            );
+          return;
+        }
+
+        // Validar scale response
+        if (response.scaleResponse !== undefined) {
+          if (
+            typeof response.scaleResponse !== "number" ||
+            response.scaleResponse < 1 ||
+            response.scaleResponse > 5
+          ) {
+            res
+              .status(400)
+              .json(
+                ApiResponse.error(
+                  `Response ${
+                    index + 1
+                  }: Scale response must be a number between 1 and 5`,
+                  400
+                )
+              );
+            return;
+          }
+        }
+
+        // Validar text response
+        if (response.textResponse !== undefined) {
+          if (
+            typeof response.textResponse !== "string" ||
+            response.textResponse.trim().length === 0
+          ) {
+            res
+              .status(400)
+              .json(
+                ApiResponse.error(
+                  `Response ${index + 1}: Text response cannot be empty`,
+                  400
+                )
+              );
+            return;
+          }
+        }
+
+        // Validar boolean response
+        if (response.booleanResponse !== undefined) {
+          if (typeof response.booleanResponse !== "boolean") {
+            res
+              .status(400)
+              .json(
+                ApiResponse.error(
+                  `Response ${
+                    index + 1
+                  }: Boolean response must be true or false`,
+                  400
+                )
+              );
+            return;
+          }
+        }
+      }
+
+      // ========================================
+      // VERIFICAR RESPONSEIDS DUPLICADOS
+      // ========================================
+      const responseIds = responses.map((r) => r.responseId);
+      const uniqueResponseIds = new Set(responseIds);
+
+      if (responseIds.length !== uniqueResponseIds.size) {
+        res
+          .status(400)
+          .json(
+            ApiResponse.error("Duplicate response IDs are not allowed", 400)
+          );
+        return;
+      }
+
+      // ========================================
+      // PREPARAR DADOS E CHAMAR SERVICE
+      // ========================================
+      const updateData: UpdateMultipleQuestionResponsesDto = {
+        responses: responses.map((r) => ({
+          responseId: r.responseId.trim(),
+          booleanResponse: r.booleanResponse,
+          scaleResponse: r.scaleResponse,
+          textResponse: r.textResponse?.trim(),
+        })),
+      };
+
+      const result =
+        await this.questionResponseService.updateMultipleQuestionResponses(
+          updateData,
+          user.id
+        );
+
+      // ========================================
+      // DETERMINAR STATUS CODE E MENSAGEM
+      // ========================================
+      let statusCode = 200;
+      let message = "";
+
+      if (result.summary.totalUpdated === result.summary.totalProcessed) {
+        message = `All ${result.summary.totalUpdated} response(s) updated successfully!`;
+      } else if (result.summary.totalUpdated > 0) {
+        message = `${result.summary.totalUpdated} of ${result.summary.totalProcessed} response(s) updated successfully!`;
+        statusCode = 207; // Multi-status (sucesso parcial)
+      } else {
+        message = "No responses were updated due to errors";
+        statusCode = 400;
+      }
+
+      res.status(statusCode).json(ApiResponse.success(result, message));
+    } catch (error) {
+      this.handleError(error, res, "Update multiple question responses error");
+    }
+  }
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================

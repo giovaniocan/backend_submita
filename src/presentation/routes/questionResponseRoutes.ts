@@ -12,4 +12,12 @@ router.post("/", authenticate, requireEvaluator(), async (req, res, next) => {
   await questionResponseController.saveChecklistResponses(req, res, next);
 });
 
+router.put("/", authenticate, requireEvaluator(), async (req, res, next) => {
+  await questionResponseController.updateMultipleQuestionResponses(
+    req,
+    res,
+    next
+  );
+});
+
 export { router as questionResponseRoutes };

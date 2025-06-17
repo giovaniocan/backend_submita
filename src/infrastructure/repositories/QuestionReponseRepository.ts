@@ -1,8 +1,37 @@
 // src/infrastructure/repositories/QuestionResponseRepository.ts
 
 import { CreateQuestionResponseData } from "../../application/dtos/QuestionResponseDto";
-import { QuestionResponse } from "../../generated/prisma";
+import { Prisma, QuestionResponse } from "../../generated/prisma";
 import { prisma } from "../../lib/prisma";
+
+type QuestionResponseWithRelations = Prisma.QuestionResponseGetPayload<{
+  include: {
+    question: {
+      select: {
+        id: true;
+        description: true;
+        type: true;
+        isRequired: true;
+        order: true;
+        checklistId: true;
+      };
+    };
+    user: {
+      select: {
+        id: true;
+        name: true;
+        email: true;
+      };
+    };
+    articleVersion: {
+      select: {
+        id: true;
+        version: true;
+        articleId: true;
+      };
+    };
+  };
+}>;
 
 export class QuestionResponseRepository {
   async create(data: CreateQuestionResponseData): Promise<QuestionResponse> {
@@ -127,6 +156,64 @@ export class QuestionResponseRepository {
         userId,
         articleVersionId,
         questionId,
+      },
+    });
+  }
+
+  async findByIdWithRelations(
+    id: string
+  ): Promise<QuestionResponseWithRelations | null> {
+    const result = await prisma.questionResponse.findUnique({
+      where: { id },
+      include: {
+        question: {
+          select: {
+            id: true,
+            description: true,
+            type: true,
+            isRequired: true,
+            order: true,
+            checklistId: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        articleVersion: {
+          select: {
+            id: true,
+            version: true,
+            articleId: true,
+          },
+        },
+      },
+    });
+
+    return result;
+  }
+
+  // ========================================
+  // ATUALIZAR RESPOSTA
+  // ========================================
+  async update(
+    id: string,
+    data: {
+      booleanResponse?: boolean | null;
+      scaleResponse?: number | null;
+      textResponse?: string | null;
+    }
+  ): Promise<QuestionResponse> {
+    return await prisma.questionResponse.update({
+      where: { id },
+      data: {
+        booleanResponse: data.booleanResponse,
+        scaleResponse: data.scaleResponse,
+        textResponse: data.textResponse,
+        updatedAt: new Date(),
       },
     });
   }
