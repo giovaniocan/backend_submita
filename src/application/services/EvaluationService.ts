@@ -23,6 +23,7 @@ import {
   UpdateEvaluationDto,
   UpdateEvaluationResponseDto,
 } from "../dtos/EvaluationDto";
+import { QuestionResponseService } from "./QuestionResponseService";
 
 interface DeleteValidationContext {
   evaluation: Evaluation;
@@ -38,6 +39,7 @@ export class EvaluationService {
   private eventRepository: EventRepository;
   private eventEvaluatorRepository: EventEvaluatorRepository;
   private assignmentRepository: ArticleEvaluatorAssignmentRepository;
+  private questionResponseService: QuestionResponseService;
 
   private static readonly BUSINESS_RULES = {
     DELETE_DEADLINES: {
@@ -62,6 +64,7 @@ export class EvaluationService {
     this.eventRepository = new EventRepository();
     this.eventEvaluatorRepository = new EventEvaluatorRepository();
     this.assignmentRepository = new ArticleEvaluatorAssignmentRepository();
+    this.questionResponseService = new QuestionResponseService();
   }
 
   async createEvaluation(
@@ -101,6 +104,27 @@ export class EvaluationService {
         evaluationStatus: evaluationData.status,
       });
 
+      if (
+        evaluationData.checklistResponses &&
+        evaluationData.checklistResponses.length > 0
+      ) {
+        try {
+          await this.questionResponseService.saveChecklistResponses(
+            {
+              articleVersionId: evaluationData.articleVersionId,
+              responses: evaluationData.checklistResponses,
+            },
+            userId
+          );
+        } catch (checklistError) {
+          console.warn(
+            "Error saving checklist, but evaluation continues:",
+            checklistError
+          );
+          // Não quebra a evaluation se checklist der erro
+        }
+      }
+
       await this.assignmentRepository.markAsCorrected(
         article.id,
         eventEvaluatorId
@@ -113,6 +137,12 @@ export class EvaluationService {
         article.id,
         event.evaluationType
       );
+
+      const checklistResponses =
+        await this.questionResponseService.getResponsesForEvaluation(
+          userId,
+          evaluationData.articleVersionId
+        );
 
       let articleFinalized = false;
       let finalGrade: number | undefined;
@@ -138,7 +168,10 @@ export class EvaluationService {
       }
 
       return {
-        evaluation: await this.toEvaluationResponse(evaluation),
+        evaluation: {
+          ...(await this.toEvaluationResponse(evaluation)),
+          checklistResponses,
+        },
         articleFinalized,
         finalGrade,
         finalStatus: finalStatus,

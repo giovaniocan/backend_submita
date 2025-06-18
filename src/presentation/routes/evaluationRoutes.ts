@@ -5,11 +5,12 @@ import {
   requireEvaluator,
   requireStaff,
 } from "../middlewares/authMiddleware";
-import { notifyArticleReviewed } from "../middlewares/emailNotificationMiddleware";
 import { EvaluationController } from "../controllers/EvaluationController";
+import { QuestionResponseController } from "../controllers/QuestionResponseController";
 
 const router = Router();
 const evaluationController = new EvaluationController();
+const questionResponseController = new QuestionResponseController();
 
 // ========================================
 // ROTAS DE AVALIAÇÃO
@@ -77,6 +78,15 @@ router.delete(
   requireStaff(), // EVALUATOR ou COORDINATOR
   async (req, res, next) => {
     await evaluationController.deleteEvaluation(req, res, next);
+  }
+);
+
+router.delete(
+  "/:evaluationId/clear-checklist",
+  authenticate,
+  requireEvaluator(),
+  async (req, res, next) => {
+    await questionResponseController.clearAllChecklistResponses(req, res, next);
   }
 );
 
