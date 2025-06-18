@@ -130,6 +130,7 @@ export interface ListEvaluationsDto {
   gradeMax?: number; // Nota máxima (0-10)
   dateFrom?: Date; // Data inicial
   dateTo?: Date; // Data final
+  withChecklistResponses?: boolean; // Incluir respostas de checklist
 }
 
 export interface PaginatedEvaluationsResponseDto {

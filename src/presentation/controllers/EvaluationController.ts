@@ -268,6 +268,7 @@ export class EvaluationController {
         dateTo: req.query.dateTo
           ? new Date(req.query.dateTo as string)
           : undefined,
+        withChecklistResponses: req.query.withChecklistResponses === "true",
       };
 
       // 3️⃣ VALIDAÇÕES BÁSICAS (as principais são feitas no service)

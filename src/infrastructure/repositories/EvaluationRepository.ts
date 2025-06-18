@@ -218,14 +218,19 @@ export class EvaluationRepository {
   async findManyWithFilters(
     filters: ListEvaluationsDto
   ): Promise<{ evaluations: any[]; total: number }> {
-    const { page = 1, limit = 10, ...otherFilters } = filters;
+    const {
+      page = 1,
+      limit = 10,
+      withChecklistResponses = true,
+      ...otherFilters
+    } = filters;
     const skip = (page - 1) * limit;
 
     // Construir condições WHERE
     const where = this.buildWhereConditions(otherFilters);
 
     // Configurar includes para dados relacionados
-    const include = this.buildIncludeRelations();
+    const include = this.buildIncludeRelations(withChecklistResponses);
 
     // Executar queries em paralelo para otimização
     const [evaluations, total] = await Promise.all([
@@ -293,8 +298,8 @@ export class EvaluationRepository {
   // ========================================
   // MÉTODO PRIVADO PARA CONSTRUIR INCLUDES
   // ========================================
-  private buildIncludeRelations(): Prisma.EvaluationInclude {
-    return {
+  private buildIncludeRelations(withChecklistResponses: boolean = false): any {
+    const include: any = {
       user: {
         select: {
           id: true,
@@ -324,6 +329,29 @@ export class EvaluationRepository {
         },
       },
     };
+
+    // ✅ ADICIONAR questionResponses apenas se solicitado
+    if (withChecklistResponses) {
+      include.articleVersion.select.questionResponses = {
+        include: {
+          question: {
+            select: {
+              id: true,
+              description: true,
+              type: true,
+              order: true,
+            },
+          },
+        },
+        orderBy: {
+          question: {
+            order: "asc",
+          },
+        },
+      };
+    }
+
+    return include;
   }
 
   // ========================================

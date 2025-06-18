@@ -549,49 +549,61 @@ export class EvaluationService {
     return uuidRegex.test(uuid);
   }
 
-  private async toEvaluationResponse(evaluation: Evaluation): Promise<any> {
-    // Buscar dados relacionados para resposta completa
-    const evaluationWithRelations =
-      await this.evaluationRepository.findByIdWithRelations(evaluation.id);
-
-    if (!evaluationWithRelations) {
-      throw new AppError("Evaluation not found after creation", 500);
-    }
-
-    return {
-      id: evaluationWithRelations.id,
-      grade: evaluationWithRelations.grade,
-      evaluationDescription: evaluationWithRelations.evaluationDescription,
-      evaluationDate: evaluationWithRelations.evaluationDate,
-      userId: evaluationWithRelations.userId,
-      articleVersionId: evaluationWithRelations.articleVersionId,
-      createdAt: evaluationWithRelations.createdAt,
-      updatedAt: evaluationWithRelations.updatedAt,
+  private toEvaluationResponse(evaluation: any): EvaluationResponseDto {
+    const response: EvaluationResponseDto = {
+      id: evaluation.id,
+      grade: evaluation.grade,
+      evaluationDescription: evaluation.evaluationDescription,
+      evaluationDate: evaluation.evaluationDate,
+      userId: evaluation.userId,
+      articleVersionId: evaluation.articleVersionId,
+      createdAt: evaluation.createdAt,
+      updatedAt: evaluation.updatedAt,
       user: {
-        id: evaluationWithRelations.user.id,
-        name: evaluationWithRelations.user.name,
-        email: evaluationWithRelations.user.email,
+        id: evaluation.user.id,
+        name: evaluation.user.name,
+        email: evaluation.user.email,
       },
       articleVersion: {
-        id: evaluationWithRelations.articleVersion.id,
-        version: evaluationWithRelations.articleVersion.version,
+        id: evaluation.articleVersion.id,
+        version: evaluation.articleVersion.version,
         article: {
-          id: evaluationWithRelations.articleVersion.article.id,
-          title: evaluationWithRelations.articleVersion.article.title,
-          status: evaluationWithRelations.articleVersion.article.status,
-          evaluationsDone:
-            evaluationWithRelations.articleVersion.article.evaluationsDone,
+          id: evaluation.articleVersion.article.id,
+          title: evaluation.articleVersion.article.title,
+          status: evaluation.articleVersion.article.status,
+          evaluationsDone: evaluation.articleVersion.article.evaluationsDone,
           event: {
-            id: evaluationWithRelations.articleVersion.article.event.id,
-            name: evaluationWithRelations.articleVersion.article.event.name,
+            id: evaluation.articleVersion.article.event.id,
+            name: evaluation.articleVersion.article.event.name,
             evaluationType:
-              evaluationWithRelations.articleVersion.article.event
-                .evaluationType,
+              evaluation.articleVersion.article.event.evaluationType,
           },
         },
       },
     };
+
+    // ✅ INCLUIR checklistResponses se existirem
+    if (evaluation.articleVersion?.questionResponses?.length > 0) {
+      response.checklistResponses =
+        evaluation.articleVersion.questionResponses.map((qr: any) => ({
+          id: qr.id,
+          questionId: qr.questionId,
+          booleanResponse: qr.booleanResponse ?? undefined,
+          scaleResponse: qr.scaleResponse ?? undefined,
+          textResponse: qr.textResponse ?? undefined,
+          question: {
+            description: qr.question.description,
+            type: qr.question.type,
+            order: qr.question.order,
+          },
+        }));
+    }
+
+    return response;
   }
+
+  // ... resto dos métodos permanecem iguais ...
+
   //DELETE METHODS
   //----------------------------------------------------
 
@@ -957,6 +969,18 @@ export class EvaluationService {
     // 3️⃣ BUSCAR AVALIAÇÕES
     const { evaluations, total } =
       await this.evaluationRepository.findManyWithFilters(secureFilters);
+
+    // ✅ Se incluiu checklist, filtrar apenas respostas do avaliador
+    if (filters.withChecklistResponses) {
+      evaluations.forEach((evaluation: any) => {
+        if (evaluation.articleVersion?.questionResponses) {
+          evaluation.articleVersion.questionResponses =
+            evaluation.articleVersion.questionResponses.filter(
+              (response: any) => response.userId === evaluation.userId
+            );
+        }
+      });
+    }
 
     // 4️⃣ CALCULAR ESTATÍSTICAS (se houver avaliações)
     const summary =
