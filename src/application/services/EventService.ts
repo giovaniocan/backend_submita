@@ -298,26 +298,6 @@ export class EventService {
     ) {
       throw new AppError("Invalid date format", 400);
     }
-
-    // Data de início do evento deve ser posterior à atual
-    if (eventStart <= now) {
-      throw new AppError("Event start date must be in the future", 400);
-    }
-
-    // Data de fim deve ser posterior à de início
-    if (eventEnd <= eventStart) {
-      throw new AppError("Event end date must be after start date", 400);
-    }
-
-    // Submissões devem estar dentro do período do evento
-    if (submissionStart < eventStart || submissionEnd > eventEnd) {
-      throw new AppError("Submission period must be within event period", 400);
-    }
-
-    // Data de fim das submissões deve ser posterior à de início
-    if (submissionEnd <= submissionStart) {
-      throw new AppError("Submission end date must be after start date", 400);
-    }
   }
 
   private validateUpdateDates(
@@ -331,17 +311,14 @@ export class EventService {
     const submissionEnd =
       eventData.submissionEndDate || existingEvent.submissionEndDate;
 
-    // Aplicar as mesmas validações do create
-    if (eventEnd <= eventStart) {
-      throw new AppError("Event end date must be after start date", 400);
-    }
-
-    if (submissionStart < eventStart || submissionEnd > eventEnd) {
-      throw new AppError("Submission period must be within event period", 400);
-    }
-
-    if (submissionEnd <= submissionStart) {
-      throw new AppError("Submission end date must be after start date", 400);
+  // Validar se as datas são válidas
+    if (
+      isNaN(eventStart.getTime()) ||
+      isNaN(eventEnd.getTime()) ||
+      isNaN(submissionStart.getTime()) ||
+      isNaN(submissionEnd.getTime())
+    ) {
+      throw new AppError("Invalid date format", 400);
     }
   }
 
