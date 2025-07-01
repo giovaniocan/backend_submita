@@ -2,11 +2,19 @@ import { Router } from "express";
 import {
   authenticate,
   requireCoordinator,
+  requireStudent,
 } from "../middlewares/authMiddleware";
 import { ArticleController } from "../controllers/ArticleController";
 
 const router = Router();
 const articleController = new ArticleController();
+
+// REQUISIÇÕES STUDENTS - JPF
+router.get("/student/articles/", authenticate, requireStudent(), async (req, res, next) => {
+  await articleController.getArticlesByUserId(req, res, next);
+});
+
+// REQUISIÇÕES COORDINATOR - JPF
 
 router.get("/coordinator/articles/:eventId", authenticate, requireCoordinator(), async (req, res, next) => {
   await articleController.getArticlesByEventId(req, res, next);

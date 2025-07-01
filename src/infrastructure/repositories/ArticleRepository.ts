@@ -50,6 +50,27 @@ export class ArticleRepository {
     });
   }
 
+  // Buscar artigo ativo por ID de usuario
+  async findByUserId(userId: string): Promise<(Article)[]> {
+    return await prisma.article.findMany({
+      where: {
+        userId,
+        isActive: true,
+      },
+    });
+  }
+
+  // Buscar artigo ativo por ID de evento e ID de usuario
+  async findByEventIdAndUserId(eventId: string, userId: string): Promise<(Article)[]> {
+    return await prisma.article.findMany({
+      where: {
+        eventId,
+        userId,
+        isActive: true,
+      },
+    });
+  }
+
   // Buscar artigo ativo por ID de evento
   async findByEventId(eventId: string): Promise<(Article)[]> {
     return await prisma.article.findMany({

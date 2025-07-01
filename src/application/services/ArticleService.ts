@@ -415,6 +415,41 @@ export class ArticleService {
     }
   }
 
+  async getArticlesByUserId(userId: string): Promise<{
+    articles: Article[];
+  }> {
+    if (!this.isValidUUID(userId)) {
+      throw new AppError("Invalid user ID format", 400);
+    }
+
+    const articles = await this.articleRepository.findByUserId(userId);
+
+    if (!articles) {
+      throw new AppError("Articles not found", 404);
+    }
+
+    return { articles };
+  }
+
+  async getArticlesByEventIdAndUserId(eventId: string, userId: string): Promise<{
+    articles: Article[];
+  }> {
+    if (!this.isValidUUID(eventId)) {
+      throw new AppError("Invalid event ID format", 400);
+    }
+    if (!this.isValidUUID(userId)) {
+      throw new AppError("Invalid user ID format", 400);
+    }
+
+    const articles = await this.articleRepository.findByEventIdAndUserId(eventId, userId);
+
+    if (!articles) {
+      throw new AppError("Articles not found", 404);
+    }
+
+    return { articles };
+  }
+
   async getArticlesByEventId(eventId: string): Promise<{
     articles: Article[];
   }> {

@@ -57,6 +57,18 @@ export class EventService {
     return this.toEventResponse(event);
   }
 
+  async getStatsByEventId(id: string): Promise<Object> {
+    if (!this.isValidUUID(id)) {
+      throw new AppError("Invalid event ID format", 400);
+    }
+
+    const stats = await this.eventRepository.findStatsById(id);
+    if (!stats) {
+      throw new AppError("Event not found", 404);
+    }
+    return stats;
+  }
+
   async getActiveEventById(
     id: string,
     includeStats = false
