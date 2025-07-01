@@ -180,6 +180,13 @@ export class ArticleService {
 
     const maxEvaluators = this.getMaxEvaluatorsByType(event.evaluationType);
 
+    if (maxEvaluators < evaluatorIds.length) {
+      throw new AppError(
+        `Cannot assign more than ${maxEvaluators} evaluators for ${event.evaluationType} evaluation`,
+        400
+      );
+    }
+
     const currentAssignments = await this.assignmentRepository.countByArticleId(
       articleId
     );
