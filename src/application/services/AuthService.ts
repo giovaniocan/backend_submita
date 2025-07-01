@@ -80,11 +80,6 @@ export class AuthService {
     // Gerar token
     const token = this.generateToken(user.id, user.email, user.role);
 
-    // Atualizar isFirstLogin se for o primeiro login
-    if (user.isFirstLogin === true) {
-      await this.authRepository.updateFirstLoginToFalse(user.id);
-    }
-
     return {
       user: this.toUserResponse(user),
       token,
@@ -140,6 +135,12 @@ export class AuthService {
 
     // 6. Retornar resposta adequada
     const wasFirstLogin = user.isFirstLogin;
+
+    const currentUser = await this.authRepository.findActiveByEmail(user.email);
+
+    if (currentUser && currentUser.isFirstLogin === true) {
+      await this.authRepository.updateFirstLoginToFalse(currentUser.id);
+    }
 
     return {
       message: wasFirstLogin
