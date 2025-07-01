@@ -132,7 +132,7 @@ export class StatsRepository {
         status: {
           in: [
             ArticleStatus.APPROVED,
-            ArticleStatus.IN_CORRECTION,
+            ArticleStatus.IN_EVALUATION,
             ArticleStatus.REJECTED,
           ],
         },
@@ -218,7 +218,7 @@ export class StatsRepository {
       where: {
         userId: userId,
         isActive: true,
-        status: ArticleStatus.IN_CORRECTION,
+        status: ArticleStatus.IN_EVALUATION,
       },
     });
   }
@@ -371,7 +371,7 @@ export class StatsRepository {
       grade: evaluation.grade,
       evaluationDescription: evaluation.evaluationDescription,
       evaluationDate: evaluation.evaluationDate,
-      status: evaluation.status,
+      status: evaluation.articleVersion.article.status,
       createdAt: evaluation.createdAt,
       updatedAt: evaluation.updatedAt,
       articleVersion: {
