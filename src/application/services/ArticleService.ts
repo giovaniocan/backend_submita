@@ -415,20 +415,20 @@ export class ArticleService {
     }
   }
 
-  async getArticlesByUserId(userId: string): Promise<{
-    articles: Article[];
+  async getArticlesById(articleId: string): Promise<{
+    article: Article;
   }> {
-    if (!this.isValidUUID(userId)) {
-      throw new AppError("Invalid user ID format", 400);
+    if (!this.isValidUUID(articleId)) {
+      throw new AppError("Invalid article ID format", 400);
     }
 
-    const articles = await this.articleRepository.findByUserId(userId);
+    const article = await this.articleRepository.findByIdComplex(articleId);
 
-    if (!articles) {
-      throw new AppError("Articles not found", 404);
+    if (!article) {
+      throw new AppError("Article not found", 404);
     }
 
-    return { articles };
+    return { article };
   }
 
   async getArticlesByEventIdAndUserId(eventId: string, userId: string): Promise<{

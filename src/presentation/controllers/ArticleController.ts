@@ -112,15 +112,16 @@ export class ArticleController {
     }
   }
 
-  async getArticlesByUserId(req: Request, res: Response, next: NextFunction): Promise<void>{
+  async getArticlesById(req: Request, res: Response, next: NextFunction): Promise<void>{
     try {
+      const { articleId } = req.params;
       const user = req.user;
       if (!user) {
         res.status(401).json(ApiResponse.error("User not authenticated", 401));
         return;
       }
 
-      const articlesByEventId = await this.articleService.getArticlesByUserId(user.id);
+      const articlesByEventId = await this.articleService.getArticlesById(articleId);
 
       res
       .status(200)

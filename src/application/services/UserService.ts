@@ -8,7 +8,7 @@ import {
   EvaluatorResponseDto,
   PaginatedEvaluatorsDto,
 } from "../dtos/userDto";
-import { User } from "../../generated/prisma";
+import { RoleType, User } from "../../generated/prisma";
 
 export class UserService {
   private userRepository: UserRepository;
@@ -52,6 +52,38 @@ export class UserService {
       page,
       limit,
       totalPages,
+    };
+  }
+
+
+  async getAllUsersByRole(role: RoleType, filters: ListAvailableEvaluatorsDto): Promise<{
+    users: object[];
+    pagination: object;
+  }> {
+    if (filters.page && filters.page < 1) {
+      throw new AppError("Page must be greater than 0", 400);
+    }
+    if (filters.limit && (filters.limit <= 0)) {
+      throw new AppError("Limit must be higher than 0", 400);
+    }
+
+    const { users, total } = await this.userRepository.findAllUsersByRole(
+      role,
+      filters
+    );
+
+    const page = filters.page || 1;
+    const limit = filters.limit || 10;
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      users: users,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages
+      },
     };
   }
 

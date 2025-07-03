@@ -10,6 +10,14 @@ import { ArticleController } from "../controllers/ArticleController";
 const articleController = new ArticleController();
 const router = Router();
 
+// Pegar artigos de usuario especifico
+router.get("/:articleId",
+  authenticate,
+  // requireStudent(),
+  async (req, res, next) => {
+  await articleController.getArticlesById(req, res, next);
+});
+
 // Criar evento (apenas COORDINATOR)
 router.post("/", authenticate, requireStudent(), async (req, res, next) => {
   await articleController.createArticle(req, res, next);

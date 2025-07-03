@@ -39,6 +39,20 @@ export class ArticleRepository {
       where: { id },
     });
   }
+  // Buscar por ID
+  async findByIdComplex(id: string): Promise<Article | null> {
+    return await prisma.article.findUnique({
+      where: { 
+        id
+      },
+      include: {
+        event: true,
+        user: true,
+        versions: true,
+        evaluatorAssignments: true,
+      },
+    });
+  }
 
   // Buscar artigo ativo por ID
   async findActiveById(id: string): Promise<Article | null> {

@@ -2,8 +2,9 @@ import {
   CreateEventDto,
   UpdateEventDto,
   ListEventsDto,
+  OptionalArgs,
 } from "../../application/dtos/EventDto";
-import { Event } from "../../generated/prisma";
+import { Article, Event } from "../../generated/prisma";
 import { prisma } from "../../lib/prisma";
 
 export class EventRepository {
@@ -129,6 +130,42 @@ export class EventRepository {
       where: { isActive: true },
       orderBy: { createdAt: "desc" },
     });
+  }
+
+  // Buscar artigo ativo por ID de evento
+  async findArticlesByEventId(eventId: string, optionalArgs:OptionalArgs): Promise<{
+    articles: (Article)[];
+    total:number;
+  }> {
+    const { search, status, page, limit } = optionalArgs;
+
+    let whereClause:any = {
+      eventId,
+      isActive: true,
+    };
+        
+    if(search){
+      whereClause.title = {
+        contains: search,
+        mode: 'insensitive',
+      };
+    }
+    if(status){ whereClause.status = status; }
+
+    return {
+      articles: await prisma.article.findMany({
+        where: whereClause,
+        include: {
+          keywords: true,
+          relatedAuthors: true,
+        },
+        skip: page && limit ? (page - 1) * limit : undefined,
+        take: limit ?? undefined
+      }),
+      total: await prisma.article.count({
+        where: whereClause
+      })
+  };
   }
 
   // ========================================

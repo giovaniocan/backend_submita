@@ -75,6 +75,42 @@ export class EventController {
     }
   }
 
+  // JPF: Listar artigos por id de evento
+  async getArticlesByEventId(req: Request, res: Response, next: NextFunction): Promise<void>{
+    try {
+      const { eventId } = req.params;
+      const optionalArgs = {
+        search: req.body.search,
+        status: req.body.status,
+        page: req.body.page == undefined || req.body.page == null ? 1 : req.body.page,
+        limit: req.body.limit == undefined || req.body.limit == null ? 10 : req.body.limit
+      };
+
+      if (!eventId) {
+        res
+          .status(400)
+          .json(ApiResponse.error("Event ID is required", 400));
+        return;
+      }
+
+      const articlesByEventId = await this.eventService.getArticlesByEventId(eventId, optionalArgs);
+
+      const response:any = ApiResponse.success(
+          articlesByEventId.articles,
+          "Articles retrieved successfully"
+        );
+      response.pagination = articlesByEventId.pagination;
+      
+      res
+      .status(200)
+      .json(
+        response
+      );
+    } catch (error) {
+      this.handleError(error, res, "Get articles by event id error");
+    }
+  }
+
   // Listar eventos com filtros
   async getEvents(
     req: Request,

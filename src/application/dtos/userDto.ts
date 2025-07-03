@@ -28,3 +28,26 @@ export interface PaginatedEvaluatorsDto {
   limit: number;
   totalPages: number;
 }
+
+export interface StudentDto {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  articlesCount:number;
+  isActive: boolean;
+  isFromBpk: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+export interface EvaluatorDto {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  evaluationsCount:number;
+  isActive: boolean;
+  isFromBpk: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}

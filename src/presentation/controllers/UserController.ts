@@ -5,6 +5,7 @@ import { UserService } from "../../application/services/UserService";
 import { ApiResponse } from "../../shared/utils/response";
 import { AppError } from "../../shared/errors/AppError";
 import { ListAvailableEvaluatorsDto } from "../../application/dtos/userDto";
+import { RoleType } from "../../generated/prisma";
 
 export class UserController {
   private userService: UserService;
@@ -42,6 +43,37 @@ export class UserController {
         );
     } catch (error) {
       this.handleError(error, res, "Get all evaluators error");
+    }
+  }
+
+  // JPF: Listar os usuarios por cargos com filtros.
+  async getAllUsersByRole(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+    role:RoleType
+  ): Promise<void> {
+    try {
+      const filters: ListAvailableEvaluatorsDto = {
+        page: req.query.page ? parseInt(req.query.page as string) : undefined,
+        limit: req.query.limit
+          ? parseInt(req.query.limit as string)
+          : undefined,
+        search: req.query.search as string,
+        isActive: req.query.isActive
+          ? req.query.isActive === "true"
+          : undefined,
+      };
+      const result = await this.userService.getAllUsersByRole(role, filters);
+      const response:any = ApiResponse.success(result.users, "All users retrieved successfully!");
+      response.pagination = result.pagination;
+      res
+        .status(200)
+        .json(
+          response
+        );
+    } catch (error) {
+      this.handleError(error, res, "Get users error");
     }
   }
 

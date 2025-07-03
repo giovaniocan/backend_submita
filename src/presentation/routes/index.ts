@@ -15,7 +15,7 @@ const router = Router();
 
 router.use("/auth", authRoutes);
 router.use("/events", eventRoutes);
-router.use("/users", userRoutes);
+router.use("", userRoutes);
 router.use("/articles", articleRoutes);
 router.use("/dashboard", dashboardRoutes);
 

@@ -6,8 +6,9 @@ import {
   EventResponseDto,
   ListEventsDto,
   PaginatedEventsDto,
+  OptionalArgs,
 } from "../dtos/EventDto";
-import { Event } from "../../generated/prisma";
+import { Article, Event } from "../../generated/prisma";
 import { ChecklistRepository } from "../../infrastructure/repositories/ChecklistRepository";
 
 export class EventService {
@@ -55,6 +56,48 @@ export class EventService {
     }
 
     return this.toEventResponse(event);
+  }
+
+  async getArticlesByEventId(eventId: string, optionalArgs:OptionalArgs): Promise<{
+    articles: Article[];
+    pagination: object;
+  }> {
+    const { search, status, page, limit } = optionalArgs;
+    if (!this.isValidUUID(eventId)) {
+      throw new AppError("Invalid event ID format", 400);
+    }
+
+    if (page) {
+      if (!limit) throw new AppError("Limit must be defined", 400);
+      if (isNaN(Number(page))) throw new AppError("Invalid type of page", 400);
+      if (Number(page) <= 0) throw new AppError("Page must be highter than 0", 400);
+    }
+    if (limit) {
+      if (isNaN(Number(limit))) throw new AppError("Invalid type of limit", 400);
+      if (Number(limit) <= 0) throw new AppError("Limit must be highter than 0", 400);
+    }
+
+    const data = await this.eventRepository.findArticlesByEventId(eventId, optionalArgs);
+
+    if (!data) {
+      throw new AppError("Articles not found", 404);
+    }
+    if (data.articles.length == 0) {
+      throw new AppError("Articles not found", 404);
+    }
+
+    let total:number = data.total;
+    let totalPages:number = Math.ceil(total/(limit ?? 1));
+
+    return {
+      articles: data.articles,
+      pagination: {
+        total: total,
+        page,
+        limit,
+        totalPages
+      }
+    };
   }
 
   async getStatsByEventId(id: string): Promise<Object> {

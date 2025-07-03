@@ -126,6 +126,18 @@ router.delete(
 );
 
 // ========================================
+// ✅ ROTAS DE ARTIGOS
+// ========================================
+router.get(
+  "/:eventId/articles",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await eventController.getArticlesByEventId(req, res, next);
+  }
+);
+
+// ========================================
 // ✅ NOVAS ROTAS DE CHECKLIST NO EVENTO (ADICIONAR NO FINAL)
 // ========================================
 router.patch(
