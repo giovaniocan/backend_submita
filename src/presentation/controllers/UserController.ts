@@ -2,16 +2,22 @@
 
 import { Request, Response, NextFunction } from "express";
 import { UserService } from "../../application/services/UserService";
+import { ArticleService } from "../../application/services/ArticleService";
+import { EvaluationService } from "../../application/services/EvaluationService";
 import { ApiResponse } from "../../shared/utils/response";
 import { AppError } from "../../shared/errors/AppError";
 import { ListAvailableEvaluatorsDto } from "../../application/dtos/userDto";
-import { RoleType } from "../../generated/prisma";
+import { RoleType, User } from "../../generated/prisma";
 
 export class UserController {
   private userService: UserService;
+  private articleService: ArticleService;
+  private evaluationService: EvaluationService;
 
   constructor() {
     this.userService = new UserService();
+    this.articleService = new ArticleService();
+    this.evaluationService = new EvaluationService();
   }
 
   // ========================================
@@ -43,6 +49,83 @@ export class UserController {
         );
     } catch (error) {
       this.handleError(error, res, "Get all evaluators error");
+    }
+  }
+
+  // JPF: Atualizar status de usuario
+  async setStatus(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.params.id;
+
+      if (!userId) {
+        res.status(400).json(ApiResponse.error("User ID is required", 400));
+        return;
+      }
+
+      const user = await this.userService.findById(userId);
+      if (!user) {
+        res.status(400).json(ApiResponse.error("User does not exist", 400));
+        return;
+      }
+
+      const result = await this.userService.swapStatus(userId);
+      res
+        .status(200)
+        .json(
+          ApiResponse.success(result, "User status changed successfully!")
+        );
+    } catch (error) {
+      this.handleError(error, res, "Set user status error");
+    }
+  }
+
+  // JPF: Deletar de usuario
+  async delete(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.params.id;
+
+      if (!userId) {
+        res.status(400).json(ApiResponse.error("User ID is required", 400));
+        return;
+      }
+
+      const curUser:any = req.user;
+      const user = await this.userService.findById(userId);
+      if (!user) {
+        res.status(400).json(ApiResponse.error("User does not exist", 400));
+        return;
+      }
+      if (userId == curUser.id) {
+        res.status(400).json(ApiResponse.error("User can't delete itself", 400));
+        return;
+      }
+      let articles = await this.articleService.findByUserId(userId);
+      if (articles.length > 0) {
+        res.status(400).json(ApiResponse.error("User has articles", 400));
+        return;
+      }
+      let evaluations = await this.evaluationService.findByUserId(userId);
+      if (evaluations.length > 0) {
+        res.status(400).json(ApiResponse.error("User has evaluations", 400));
+        return;
+      }
+
+      const result = await this.userService.delete(userId);
+      res
+        .status(200)
+        .json(
+          ApiResponse.success(result, "User deleted successfully!")
+        );
+    } catch (error) {
+      this.handleError(error, res, "Delete user error");
     }
   }
 

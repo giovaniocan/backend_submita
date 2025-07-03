@@ -80,8 +80,6 @@ export class ArticleController {
       const body: Object = req.body;
       const { eventId } = req.params;
 
-      console.log(body);
-
       if (!eventId) {
         res
           .status(400)

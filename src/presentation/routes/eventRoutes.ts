@@ -61,6 +61,16 @@ router.put(
   }
 );
 
+// JPF: editar evento
+router.patch(
+  "/:id",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await eventController.editEvent(req, res, next);
+  }
+);
+
 // Soft delete - desativar evento (apenas COORDINATOR)
 router.patch(
   "/:id/deactivate",

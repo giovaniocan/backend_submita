@@ -196,6 +196,55 @@ export class EventService {
     const updatedEvent = await this.eventRepository.update(id, eventData);
     return this.toEventResponse(updatedEvent);
   }
+  
+  // JPF: Editar evento
+  async editEvent(
+    id: string,
+    eventData: UpdateEventDto
+  ): Promise<EventResponseDto> {
+    if (!this.isValidUUID(id)) {
+      throw new AppError("Invalid event ID format", 400);
+    }
+
+    // Verificar se evento existe
+    const existingEvent = await this.eventRepository.findById(id);
+    if (!existingEvent) {
+      throw new AppError("Event not found", 404);
+    }
+
+    const allowedKeys = ['name', 'description', 'banner', 'evaluationType', 'status', 'eventStartDate', 'eventEndDate', 'submissionStartDate', 'submissionEndDate'];
+    // Remove objetos desnecessarios do eventData
+    eventData = Object.fromEntries(Object.entries(eventData).filter(([key]) => allowedKeys.includes(key)) );
+
+    // Validar dados se fornecidos
+    if (Object.keys(eventData).length === 0) {
+      throw new AppError("No data provided for update", 400);
+    }
+
+    // Validar datas se fornecidas
+    if (this.hasDateFields(eventData)) {
+      this.validateUpdateDates(eventData, existingEvent);
+    }
+
+    // Validar evaluationType
+    if(eventData.evaluationType){
+      let evaluationTypes = ['DIRECT', 'PAIR', 'PANEL'];
+      if(!evaluationTypes.includes(eventData.evaluationType)){
+        throw new AppError("Type of evaluation dosen't exist", 400);
+      }
+    }
+
+    // Validar status
+    if(eventData.status){
+      let statusTypes = ['DRAFT', 'SUBMISSIONS_OPEN', 'SUBMISSIONS_CLOSED', 'IN_EVALUATION', 'COMPLETED', 'CANCELLED'];
+      if(!statusTypes.includes(eventData.status)){
+        throw new AppError("Type of status dosen't exist", 400);
+      }
+    }
+
+    const updatedEvent = await this.eventRepository.update(id, eventData);
+    return this.toEventResponse(updatedEvent);
+  }
 
   // ========================================
   // DELETE

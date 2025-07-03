@@ -226,6 +226,40 @@ export class EventController {
     }
   }
 
+  // JPF: Editar evento
+  async editEvent(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const eventData: UpdateEventDto = req.body;
+
+      // Converter strings de data para Date objects se fornecidas
+      if (eventData.eventStartDate) {
+        eventData.eventStartDate = new Date(eventData.eventStartDate);
+      }
+      if (eventData.eventEndDate) {
+        eventData.eventEndDate = new Date(eventData.eventEndDate);
+      }
+      if (eventData.submissionStartDate) {
+        eventData.submissionStartDate = new Date(eventData.submissionStartDate);
+      }
+      if (eventData.submissionEndDate) {
+        eventData.submissionEndDate = new Date(eventData.submissionEndDate);
+      }
+
+      const updatedEvent = await this.eventService.editEvent(id, eventData);
+
+      res
+        .status(200)
+        .json(ApiResponse.success(updatedEvent, "Event updated successfully!"));
+    } catch (error) {
+      this.handleError(error, res, "Update event error");
+    }
+  }
+
   // ========================================
   // DELETE (Apenas COORDINATOR)
   // ========================================

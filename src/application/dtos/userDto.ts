@@ -29,6 +29,12 @@ export interface PaginatedEvaluatorsDto {
   totalPages: number;
 }
 
+export interface SimpleUserDto {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
 export interface StudentDto {
   id: string;
   name: string;

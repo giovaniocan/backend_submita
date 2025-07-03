@@ -20,6 +20,26 @@ router.get(
   }
 );
 
+// JPF: Trocar status de usuario
+router.patch(
+  "/users/:id/toggle-status",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await userController.setStatus(req, res, next);
+  }
+);
+
+// JPF: Deletar usuario
+router.delete(
+  "/users/:id",
+  authenticate,
+  requireCoordinator(),
+  async (req, res, next) => {
+    await userController.delete(req, res, next);
+  }
+);
+
 // Listar todos os estudantes com filtros (independente de evento)
 router.get(
   "/students/users",

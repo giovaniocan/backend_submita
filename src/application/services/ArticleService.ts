@@ -153,6 +153,17 @@ export class ArticleService {
     }
   }
 
+  // JPF: encontra artigo por id de usuario
+  async findByUserId(
+    userId: string
+  ): Promise<Article[]> {
+    const articles = await this.articleRepository.findByUserId(userId);
+    if (!articles) {
+      throw new AppError("Articles not found", 404);
+    }
+    return articles;
+  }
+
   async assignEvaluatorsToArticle(
     articleId: string,
     evaluatorIds: string[]

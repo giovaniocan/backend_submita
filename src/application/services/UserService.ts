@@ -7,6 +7,7 @@ import {
   ListAvailableEvaluatorsDto,
   EvaluatorResponseDto,
   PaginatedEvaluatorsDto,
+  SimpleUserDto,
 } from "../dtos/userDto";
 import { RoleType, User } from "../../generated/prisma";
 
@@ -53,6 +54,40 @@ export class UserService {
       limit,
       totalPages,
     };
+  }
+
+  // JPF: encontra usuario por id
+  async findById(
+    userId: string
+  ): Promise<User | null> {
+    const user:User | null = await this.userRepository.findById(userId);
+    return user;
+  }
+
+  // JPF: muda status de usuario
+  async swapStatus(
+    userId: string
+  ): Promise<User | null> {
+
+    const userOld:User | null = await this.userRepository.findById(userId);
+    const user:User | null = await this.userRepository.setStatus(userId, !userOld?.isActive);
+
+    if (userOld?.isActive == user?.isActive) {
+      throw new AppError("Failed to update user status", 400);
+    }
+
+    return user;
+  }
+
+  // JPF: deleta usuario
+  async delete(
+    userId: string
+  ): Promise<SimpleUserDto | null> {
+    const user:User | null = await this.userRepository.hardDelete(userId);
+    
+    if(!user) throw new AppError("User not found", 400);
+    
+    return this.toSimpleUser(user);
   }
 
 
@@ -107,6 +142,14 @@ export class UserService {
       isFromBpk: user.isFromBpk,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+    };
+  }
+  private toSimpleUser(user: User): SimpleUserDto {
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role
     };
   }
 }

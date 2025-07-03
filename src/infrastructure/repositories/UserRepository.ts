@@ -47,6 +47,49 @@ export class UserRepository {
     return { evaluators, total };
   }
 
+  // JPF: encontrar usuario por id
+  async findById(id:string): Promise<User | null> {
+    return await prisma.user.findUnique({
+      where: { id}
+    });
+  }
+
+  // JPF: definir status de usuario
+  async setStatus(id: string, isActive:boolean): Promise<User | null> {
+    await prisma.user.update({
+      where: { id },
+      data: {
+        isActive,
+      },
+    });
+  
+    const user:User | null = await this.findById(id);
+    return user;
+  }
+
+  // JPF: desativar usuario.
+  async softDelete(id: string): Promise<User | null> {
+    await prisma.user.update({
+      where: { id },
+      data: {
+        isActive: false,
+      },
+    });
+    
+    const user:User | null = await this.findById(id);
+    return user;
+  }
+
+  // JPF: Deletar por completo usuario
+  async hardDelete(id: string): Promise<User> {
+    const user:any = await this.findById(id);
+
+    await prisma.user.delete({
+      where: { id },
+    });
+    return user;
+  }
+
   async findAllUsersByRole(
     role:RoleType,
     filters: ListAvailableEvaluatorsDto
