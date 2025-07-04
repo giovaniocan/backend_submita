@@ -212,6 +212,12 @@ export class EventService {
       throw new AppError("Event not found", 404);
     }
 
+    // Não permitir que eventos completos sejam editados
+    const status = ['COMPLETED'];
+    if(status.includes(existingEvent.status)){
+      throw new AppError("Can't edit completed event", 400);
+    }
+
     const allowedKeys = ['name', 'description', 'banner', 'evaluationType', 'status', 'eventStartDate', 'eventEndDate', 'submissionStartDate', 'submissionEndDate'];
     // Remove objetos desnecessarios do eventData
     eventData = Object.fromEntries(Object.entries(eventData).filter(([key]) => allowedKeys.includes(key)) );
@@ -225,6 +231,24 @@ export class EventService {
     if (this.hasDateFields(eventData)) {
       this.validateUpdateDates(eventData, existingEvent);
     }
+
+
+    let eventStartDate = eventData.eventStartDate;
+    if(!eventStartDate) eventStartDate = existingEvent.eventStartDate;
+    
+    let eventEndDate = eventData.eventEndDate;
+    if(!eventEndDate) eventEndDate = existingEvent.eventEndDate;
+    
+    let submissionStartDate = eventData.submissionStartDate;
+    if(!submissionStartDate) submissionStartDate = existingEvent.submissionStartDate;
+    
+    let submissionEndDate = eventData.submissionEndDate;
+    if(!submissionEndDate) submissionEndDate = existingEvent.submissionEndDate;
+
+    if(eventStartDate > eventEndDate) throw new AppError("start date can't be higher than end date of event", 400);
+    if(submissionEndDate > eventEndDate) throw new AppError("end submission date can't be higher than end date of event", 400);
+    if(submissionStartDate < eventStartDate) throw new AppError("submission date can't be lower than start date of event", 400);
+    if(submissionStartDate > submissionEndDate) throw new AppError("submission start date can't be higher than submission end date", 400);
 
     // Validar evaluationType
     if(eventData.evaluationType){
