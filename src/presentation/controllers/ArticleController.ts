@@ -75,42 +75,50 @@ export class ArticleController {
     }
   }
 
-  async getArticlesByEventIdAndUserId(req: Request, res: Response, next: NextFunction): Promise<void>{
+  async getArticlesByEventIdAndUserId(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const body: Object = req.body;
       const { eventId } = req.params;
 
       if (!eventId) {
-        res
-          .status(400)
-          .json(ApiResponse.error("Event ID is required", 400));
+        res.status(400).json(ApiResponse.error("Event ID is required", 400));
         return;
       }
 
       let userId;
       if (!userId) {
-        res
-          .status(400)
-          .json(ApiResponse.error("User ID is required", 400));
+        res.status(400).json(ApiResponse.error("User ID is required", 400));
         return;
       }
 
-      const articlesByEventId = await this.articleService.getArticlesByEventIdAndUserId(eventId, userId);
+      const articlesByEventId =
+        await this.articleService.getArticlesByEventIdAndUserId(
+          eventId,
+          userId
+        );
 
       res
-      .status(200)
-      .json(
-        ApiResponse.success(
-          articlesByEventId,
-          "Articles retrieved successfully"
-        )
-      );
+        .status(200)
+        .json(
+          ApiResponse.success(
+            articlesByEventId,
+            "Articles retrieved successfully"
+          )
+        );
     } catch (error) {
       this.handleError(error, res, "Get articles by user error");
     }
   }
 
-  async getArticlesById(req: Request, res: Response, next: NextFunction): Promise<void>{
+  async getArticlesById(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { articleId } = req.params;
       const user = req.user;
@@ -119,94 +127,110 @@ export class ArticleController {
         return;
       }
 
-      const articlesByEventId = await this.articleService.getArticlesById(articleId);
+      const articlesByEventId = await this.articleService.getArticlesById(
+        articleId
+      );
 
       res
-      .status(200)
-      .json(
-        ApiResponse.success(
-          articlesByEventId,
-          "Articles retrieved successfully"
-        )
-      );
+        .status(200)
+        .json(
+          ApiResponse.success(
+            articlesByEventId,
+            "Articles retrieved successfully"
+          )
+        );
     } catch (error) {
       this.handleError(error, res, "Get articles by user error");
     }
   }
 
-  async getArticlesByEventId(req: Request, res: Response, next: NextFunction): Promise<void>{
+  async getArticlesByEventId(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { eventId } = req.params;
 
       if (!eventId) {
-        res
-          .status(400)
-          .json(ApiResponse.error("Event ID is required", 400));
+        res.status(400).json(ApiResponse.error("Event ID is required", 400));
         return;
       }
 
-      const articlesByEventId = await this.articleService.getArticlesByEventId(eventId);
+      const articlesByEventId = await this.articleService.getArticlesByEventId(
+        eventId
+      );
 
       res
-      .status(200)
-      .json(
-        ApiResponse.success(
-          articlesByEventId,
-          "Articles retrieved successfully"
-        )
-      );
+        .status(200)
+        .json(
+          ApiResponse.success(
+            articlesByEventId,
+            "Articles retrieved successfully"
+          )
+        );
     } catch (error) {
       this.handleError(error, res, "Get articles by event id error");
     }
   }
 
-  async getArticlesByEventIdAndStatus(status:ArticleStatus, req: Request, res: Response, next: NextFunction): Promise<void>{
+  async getArticlesByEventIdAndStatus(
+    status: ArticleStatus,
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { eventId } = req.params;
 
       if (!eventId) {
-        res
-          .status(400)
-          .json(ApiResponse.error("Event ID is required", 400));
+        res.status(400).json(ApiResponse.error("Event ID is required", 400));
         return;
       }
 
-      const articlesByEventIdAndStatus = await this.articleService.getArticlesByEventIdAndStatus(eventId, status);
+      const articlesByEventIdAndStatus =
+        await this.articleService.getArticlesByEventIdAndStatus(
+          eventId,
+          status
+        );
 
       res
-      .status(200)
-      .json(
-        ApiResponse.success(
-          articlesByEventIdAndStatus,
-          "Articles retrieved successfully"
-        )
-      );
+        .status(200)
+        .json(
+          ApiResponse.success(
+            articlesByEventIdAndStatus,
+            "Articles retrieved successfully"
+          )
+        );
     } catch (error) {
       this.handleError(error, res, "Get articles by event id error");
     }
   }
 
-  async getArticlesPending(req: Request, res: Response, next: NextFunction): Promise<void>{
+  async getArticlesPending(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { eventId } = req.params;
 
       if (!eventId) {
-        res
-          .status(400)
-          .json(ApiResponse.error("Event ID is required", 400));
+        res.status(400).json(ApiResponse.error("Event ID is required", 400));
         return;
       }
 
-      const articlesByEventIdAndStatus = await this.articleService.getArticlesPending(eventId);
+      const articlesByEventIdAndStatus =
+        await this.articleService.getArticlesPending(eventId);
 
       res
-      .status(200)
-      .json(
-        ApiResponse.success(
-          articlesByEventIdAndStatus,
-          "Pending articles retrieved successfully"
-        )
-      );
+        .status(200)
+        .json(
+          ApiResponse.success(
+            articlesByEventIdAndStatus,
+            "Pending articles retrieved successfully"
+          )
+        );
     } catch (error) {
       this.handleError(error, res, "Get pending articles by event id error");
     }
@@ -258,6 +282,36 @@ export class ArticleController {
       res.status(statusCode).json(ApiResponse.success(result, message));
     } catch (error) {
       this.handleError(error, res, "Assign evaluators to article error");
+    }
+  }
+
+  async getArticlesByUserId(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const user = req.user;
+
+      if (!user) {
+        res.status(401).json(ApiResponse.error("User not authenticated", 401));
+        return;
+      }
+
+      const articlesByUserId = await this.articleService.getArticlesByUserId(
+        user.id
+      );
+
+      res
+        .status(200)
+        .json(
+          ApiResponse.success(
+            articlesByUserId,
+            "Articles retrieved successfully"
+          )
+        );
+    } catch (error) {
+      this.handleError(error, res, "Get articles by user error");
     }
   }
 

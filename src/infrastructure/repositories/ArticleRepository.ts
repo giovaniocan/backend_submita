@@ -1,7 +1,10 @@
 // src/infrastructure/repositories/ArticleRepository.ts
 
-
-import { Article, ArticleStatus, ArticleEvaluatorAssignment } from "../../generated/prisma";
+import {
+  Article,
+  ArticleStatus,
+  ArticleEvaluatorAssignment,
+} from "../../generated/prisma";
 import { prisma } from "../../lib/prisma";
 
 interface CreateArticleData {
@@ -25,7 +28,7 @@ export class ArticleRepository {
   // ========================================
   async create(articleData: CreateArticleData): Promise<Article> {
     return await prisma.article.create({
-      data: articleData
+      data: articleData,
     });
   }
 
@@ -42,12 +45,45 @@ export class ArticleRepository {
   // Buscar por ID
   async findByIdComplex(id: string): Promise<Article | null> {
     return await prisma.article.findUnique({
-      where: { 
-        id
+      where: {
+        id,
       },
       include: {
-        event: true,
-        user: true,
+        event: {
+          select: {
+            id: true,
+            name: true,
+            banner: true,
+            description: true,
+            eventStartDate: true,
+            eventEndDate: true,
+            submissionStartDate: true,
+            submissionEndDate: true,
+            status: true,
+            evaluationType: true,
+            isActive: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+          },
+        },
+        keywords: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        relatedAuthors: {
+          select: {
+            id: true,
+            coAuthorName: true,
+          },
+        },
         versions: true,
         evaluatorAssignments: true,
       },
@@ -65,17 +101,41 @@ export class ArticleRepository {
   }
 
   // Buscar artigo ativo por ID de usuario
-  async findByUserId(userId: string): Promise<(Article)[]> {
+  async findByUserId(
+    userId: string
+  ): Promise<(Article & { event: { name: string } })[]> {
     return await prisma.article.findMany({
       where: {
         userId,
         isActive: true,
       },
+      include: {
+        event: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        keywords: true,
+        relatedAuthors: true,
+        versions: {
+          orderBy: {
+            version: "desc",
+          },
+          take: 1,
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
   }
 
   // Buscar artigo ativo por ID de evento e ID de usuario
-  async findByEventIdAndUserId(eventId: string, userId: string): Promise<(Article)[]> {
+  async findByEventIdAndUserId(
+    eventId: string,
+    userId: string
+  ): Promise<Article[]> {
     return await prisma.article.findMany({
       where: {
         eventId,
@@ -86,7 +146,7 @@ export class ArticleRepository {
   }
 
   // Buscar artigo ativo por ID de evento
-  async findByEventId(eventId: string): Promise<(Article)[]> {
+  async findByEventId(eventId: string): Promise<Article[]> {
     return await prisma.article.findMany({
       where: {
         eventId,
@@ -95,7 +155,10 @@ export class ArticleRepository {
     });
   }
 
-  async findByEventIdAndStatus(eventId: string, status: ArticleStatus): Promise<(Article)[]> {
+  async findByEventIdAndStatus(
+    eventId: string,
+    status: ArticleStatus
+  ): Promise<Article[]> {
     return await prisma.article.findMany({
       where: {
         eventId,
@@ -105,11 +168,11 @@ export class ArticleRepository {
     });
   }
 
-  async findArticlesPending(eventId: string): Promise<(Article)[]> {
+  async findArticlesPending(eventId: string): Promise<Article[]> {
     return await prisma.article.findMany({
       where: {
         eventId,
-        status: 'SUBMITTED',
+        status: "SUBMITTED",
         isActive: true,
         evaluatorAssignments: {
           none: {}, // Nenhuma entrada na tabela de junção
