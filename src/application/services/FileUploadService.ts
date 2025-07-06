@@ -40,7 +40,7 @@ export class FileUploadService {
     userId: string
   ): Promise<UploadFileResponse> {
     const fileId = uuidv4();
-    const fileName = `${userId}/${fileId}.pdf`;
+    const fileName = `${fileId}.pdf`;
     const bucket = this.buckets.pdfs;
 
     try {
@@ -104,7 +104,7 @@ export class FileUploadService {
 
     const fileId = uuidv4();
     const extension = this.getFileExtension(originalName, mimeType);
-    const fileName = `${userId}/${fileId}${extension}`;
+    const fileName = `${fileId}${extension}`;
     const bucket = this.buckets.images;
 
     try {
