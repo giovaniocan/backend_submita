@@ -33,7 +33,7 @@ services:
       - auth-network
     restart: unless-stopped
 
-  # MinIO para criar buckets automaticamente
+  # MinIO para criar buckets automaticamente e configurar políticas de acesso
   minio-setup:
     image: minio/mc:latest
     container_name: submita_minio_setup
@@ -49,7 +49,10 @@ services:
       mc mb myminio/submita-files --ignore-existing;
       mc mb myminio/submita-pdfs --ignore-existing;
       mc mb myminio/submita-images --ignore-existing;
-      echo 'Buckets criados com sucesso!';
+      # Define a política de leitura pública para o bucket de imagens
+      mc policy set public myminio/submita-images;
+      mc policy set public myminio/submita-pdfs;
+      echo 'Buckets criados e políticas configuradas com sucesso!';
       exit 0;
       "
 

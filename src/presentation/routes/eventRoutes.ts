@@ -99,7 +99,7 @@ router.post(
   "/:eventId/evaluators",
   authenticate,
   requireCoordinator(),
-  notifyEvaluatorAdded(),
+  // notifyEvaluatorAdded(),
   async (req, res, next) => {
     await eventEvaluatorController.addEvaluatorsToEvent(req, res, next);
   }
