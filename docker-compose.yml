@@ -50,8 +50,8 @@ services:
       mc mb myminio/submita-pdfs --ignore-existing;
       mc mb myminio/submita-images --ignore-existing;
       # Define a política de leitura pública para o bucket de imagens
-      mc policy set public myminio/submita-images;
-      mc policy set public myminio/submita-pdfs;
+      mc anonymous set download myminio/submita-pdfs;
+      mc anonymous set download myminio/submita-images;
       echo 'Buckets criados e políticas configuradas com sucesso!';
       exit 0;
       "
