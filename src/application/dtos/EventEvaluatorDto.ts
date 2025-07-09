@@ -46,6 +46,7 @@ export interface ListEventEvaluatorsDto {
   limit?: number; // Limite de itens por página
   search?: string; // Termo de busca opcional
   isActive?: boolean; // Filtrar por avaliadores ativos
+  isFromBpk?: boolean; // Filtrar por avaliadores que são do BPK (Banco de Palestrantes e Conhecimento)
 }
 
 export interface PaginatedEventEvaluatorsDto {

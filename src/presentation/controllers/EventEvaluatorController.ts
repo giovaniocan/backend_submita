@@ -76,6 +76,9 @@ export class EventEvaluatorController {
         isActive: req.query.isActive
           ? req.query.isActive === "true"
           : undefined,
+        isFromBpk: req.query.isFromBpk
+          ? req.query.isFromBpk === "true"
+          : undefined,
       };
 
       const result = await this.eventEvaluatorService.getEventEvaluators(

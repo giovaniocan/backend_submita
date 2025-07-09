@@ -104,6 +104,8 @@ export class EventEvaluatorRepository {
               name: true,
               email: true,
               role: true,
+              isFromBpk: true,
+              isActive: true,
             },
           },
           event: {
