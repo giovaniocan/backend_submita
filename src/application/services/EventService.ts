@@ -7,7 +7,8 @@ import {
   ListEventsDto,
   PaginatedEventsDto,
 } from "../dtos/EventDto";
-import { Event } from "../../generated/prisma";
+import { Event } from "@prisma/client";
+//import { Event } from "../../generated/prisma";
 
 export class EventService {
   private eventRepository: EventRepository;
