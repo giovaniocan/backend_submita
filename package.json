@@ -4,7 +4,7 @@
   "description": "API de autenticação com Clean Architecture",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "dev:old": "nodemon src/server.ts",
