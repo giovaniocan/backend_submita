@@ -10,8 +10,8 @@ import {
 } from "../dtos/AuthDto";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { User } from "@prisma/client";
- //import { User } from "../../generated/prisma";
+import { User } from "../../generated/prisma";
+//import { User } from "../../generated/prisma";
 
 export class AuthService {
   private authRepository: AuthRepository;

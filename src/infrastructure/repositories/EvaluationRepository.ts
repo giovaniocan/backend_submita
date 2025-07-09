@@ -132,10 +132,10 @@ export class EvaluationRepository {
   }
 
   // JPF: Buscar avaliação ativo por ID de usuario
-  async findByUserId(userId: string): Promise<(Evaluation)[]> {
+  async findByUserId(userId: string): Promise<Evaluation[]> {
     return await prisma.evaluation.findMany({
       where: {
-        userId
+        userId,
       },
     });
   }

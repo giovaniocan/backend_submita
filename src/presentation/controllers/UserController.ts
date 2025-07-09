@@ -75,20 +75,14 @@ export class UserController {
       const result = await this.userService.swapStatus(userId);
       res
         .status(200)
-        .json(
-          ApiResponse.success(result, "User status changed successfully!")
-        );
+        .json(ApiResponse.success(result, "User status changed successfully!"));
     } catch (error) {
       this.handleError(error, res, "Set user status error");
     }
   }
 
   // JPF: Deletar de usuario
-  async delete(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.params.id;
 
@@ -97,14 +91,16 @@ export class UserController {
         return;
       }
 
-      const curUser:any = req.user;
+      const curUser: any = req.user;
       const user = await this.userService.findById(userId);
       if (!user) {
         res.status(400).json(ApiResponse.error("User does not exist", 400));
         return;
       }
       if (userId == curUser.id) {
-        res.status(400).json(ApiResponse.error("User can't delete itself", 400));
+        res
+          .status(400)
+          .json(ApiResponse.error("User can't delete itself", 400));
         return;
       }
       let articles = await this.articleService.findByUserId(userId);
@@ -121,9 +117,7 @@ export class UserController {
       const result = await this.userService.delete(userId);
       res
         .status(200)
-        .json(
-          ApiResponse.success(result, "User deleted successfully!")
-        );
+        .json(ApiResponse.success(result, "User deleted successfully!"));
     } catch (error) {
       this.handleError(error, res, "Delete user error");
     }
@@ -134,7 +128,7 @@ export class UserController {
     req: Request,
     res: Response,
     next: NextFunction,
-    role:RoleType
+    role: RoleType
   ): Promise<void> {
     try {
       const filters: ListAvailableEvaluatorsDto = {
@@ -148,13 +142,12 @@ export class UserController {
           : undefined,
       };
       const result = await this.userService.getAllUsersByRole(role, filters);
-      const response:any = ApiResponse.success(result.users, "All users retrieved successfully!");
+      const response: any = ApiResponse.success(
+        result.users,
+        "All users retrieved successfully!"
+      );
       response.pagination = result.pagination;
-      res
-        .status(200)
-        .json(
-          response
-        );
+      res.status(200).json(response);
     } catch (error) {
       this.handleError(error, res, "Get users error");
     }

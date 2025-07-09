@@ -57,20 +57,18 @@ export class UserService {
   }
 
   // JPF: encontra usuario por id
-  async findById(
-    userId: string
-  ): Promise<User | null> {
-    const user:User | null = await this.userRepository.findById(userId);
+  async findById(userId: string): Promise<User | null> {
+    const user: User | null = await this.userRepository.findById(userId);
     return user;
   }
 
   // JPF: muda status de usuario
-  async swapStatus(
-    userId: string
-  ): Promise<User | null> {
-
-    const userOld:User | null = await this.userRepository.findById(userId);
-    const user:User | null = await this.userRepository.setStatus(userId, !userOld?.isActive);
+  async swapStatus(userId: string): Promise<User | null> {
+    const userOld: User | null = await this.userRepository.findById(userId);
+    const user: User | null = await this.userRepository.setStatus(
+      userId,
+      !userOld?.isActive
+    );
 
     if (userOld?.isActive == user?.isActive) {
       throw new AppError("Failed to update user status", 400);
@@ -80,25 +78,25 @@ export class UserService {
   }
 
   // JPF: deleta usuario
-  async delete(
-    userId: string
-  ): Promise<SimpleUserDto | null> {
-    const user:User | null = await this.userRepository.hardDelete(userId);
-    
-    if(!user) throw new AppError("User not found", 400);
-    
+  async delete(userId: string): Promise<SimpleUserDto | null> {
+    const user: User | null = await this.userRepository.hardDelete(userId);
+
+    if (!user) throw new AppError("User not found", 400);
+
     return this.toSimpleUser(user);
   }
 
-
-  async getAllUsersByRole(role: RoleType, filters: ListAvailableEvaluatorsDto): Promise<{
+  async getAllUsersByRole(
+    role: RoleType,
+    filters: ListAvailableEvaluatorsDto
+  ): Promise<{
     users: object[];
     pagination: object;
   }> {
     if (filters.page && filters.page < 1) {
       throw new AppError("Page must be greater than 0", 400);
     }
-    if (filters.limit && (filters.limit <= 0)) {
+    if (filters.limit && filters.limit <= 0) {
       throw new AppError("Limit must be higher than 0", 400);
     }
 
@@ -117,7 +115,7 @@ export class UserService {
         total,
         page,
         limit,
-        totalPages
+        totalPages,
       },
     };
   }
@@ -149,7 +147,7 @@ export class UserService {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role
+      role: user.role,
     };
   }
 }

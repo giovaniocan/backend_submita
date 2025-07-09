@@ -1,5 +1,3 @@
-// src/application/dtos/EvaluationDto.ts
-
 import {
   Article,
   ArticleVersion,

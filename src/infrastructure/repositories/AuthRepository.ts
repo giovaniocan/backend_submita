@@ -1,5 +1,5 @@
 import { CreateUserDto } from "../../application/dtos/AuthDto";
-import { User } from "@prisma/client";
+import { User } from "../../generated/prisma";
 //import { User } from "../../generated/prisma";
 import { prisma } from "../../lib/prisma";
 

@@ -188,9 +188,7 @@ export class EvaluationService {
   }
 
   // JPF: encontra avaliacao por id de usuario
-  async findByUserId(
-    userId: string
-  ): Promise<Evaluation[]> {
+  async findByUserId(userId: string): Promise<Evaluation[]> {
     const evaluations = await this.evaluationRepository.findByUserId(userId);
     if (!evaluations) {
       throw new AppError("Evaluations not found", 404);
