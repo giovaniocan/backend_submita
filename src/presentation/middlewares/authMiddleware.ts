@@ -11,7 +11,8 @@ declare global {
         id: string;
         email: string;
         name: string;
-        role: "STUDENT" | "EVALUATOR" | "COORDINATOR"; // ✅ ADICIONADO: Role no request
+        role: "STUDENT" | "EVALUATOR" | "COORDINATOR";
+        isFirstLogin: boolean;
       };
     }
   }
@@ -80,6 +81,7 @@ export class AuthMiddleware {
         email: user.email,
         name: user.name,
         role: user.role,
+        isFirstLogin: user.isFirstLogin,
       };
 
       next();

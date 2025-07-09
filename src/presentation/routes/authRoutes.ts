@@ -38,6 +38,10 @@ router.get("/profile", authenticate, async (req, res, next) => {
   await authController.getProfile(req, res, next);
 });
 
+router.put("/change-password", authenticate, async (req, res, next) => {
+  await authController.changePassword(req, res, next);
+});
+
 // Register Evaluator (apenas COORDENADORES)
 router.post(
   "/register-evaluator",

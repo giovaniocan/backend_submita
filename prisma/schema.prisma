@@ -16,10 +16,17 @@ enum ArticleStatus {
   SUBMITTED      // Submetido
   IN_EVALUATION  // Em Avaliação
   APPROVED       // Aprovado
-  APPROVED_WITH_REMARKS // Aprovado com Ressalvas
+  IN_CORRECTION // Aprovado com Ressalvas
   REJECTED       // Reprovado
 
   @@map("article_status")
+}
+
+enum EvaluationStatus {
+  APPROVED
+  TO_CORRECTION
+  REJECTED
+  @@map("evaluation_status")
 }
 
 enum EventStatus {
@@ -64,7 +71,8 @@ model User {
   email       String   @unique @db.VarChar(100)
   password    String   @db.VarChar(300)
   name        String   @db.VarChar(100)
-  role        RoleType @default(STUDENT) // ✅ MUDANÇA: Role direta no usuário
+  role        RoleType @default(STUDENT)
+  isFirstLogin Boolean  @default(false) @map("is_first_login")
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -103,17 +111,19 @@ model Event {
   status               EventStatus @default(IN_PREPARATION)
   evaluationType       EvaluationType @map("evaluation_type")
   isActive             Boolean     @default(true) @map("is_active")
+  checklistId          String?     @map("checklist_id") @db.Uuid // ✅ NOVA COLUNA
   createdAt           DateTime    @default(now()) @map("created_at")
   updatedAt           DateTime    @updatedAt @map("updated_at")
 
   // Relacionamentos
   articles         Article[]
-  eventChecklists  EventChecklist[]
   eventEvaluators  EventEvaluator[]
+  checklist        Checklist? @relation(fields: [checklistId], references: [id], onDelete: SetNull) // ✅ NOVO
 
   @@index([status])
   @@index([isActive])
   @@index([submissionStartDate, submissionEndDate])
+  @@index([checklistId]) // ✅ NOVO ÍNDICE
   @@map("events")
 }
 
@@ -206,6 +216,7 @@ model Evaluation {
   evaluationDescription String? @map("evaluation_description") @db.Text
   evaluationDate     DateTime @map("evaluation_date")
   userId             String   @map("user_id") @db.Uuid
+  status            EvaluationStatus @default(TO_CORRECTION) // Status do artigo após avaliação
   articleVersionId   String   @map("article_version_id") @db.Uuid
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
@@ -267,39 +278,38 @@ model ArticleEvaluatorAssignment {
 // CHECKLIST SYSTEM
 // ========================================
 
-model EventChecklist {
-  id        String   @id @default(uuid()) @db.Uuid
-  eventId   String   @map("event_id") @db.Uuid
-  name      String   @db.VarChar(100)
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+model Checklist {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(100)
+  description String?  @db.VarChar(300)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relacionamentos
-  event     Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
   questions Question[]
+  events    Event[]
 
-  @@index([eventId])
   @@index([isActive])
-  @@map("event_checklists")
+  @@map("checklists")
 }
 
 model Question {
-  id               String       @id @default(uuid()) @db.Uuid
-  description      String       @db.VarChar(200)
-  type             QuestionType @default(YES_NO)
-  isRequired       Boolean      @default(true) @map("is_required")
-  eventChecklistId String       @map("event_checklist_id") @db.Uuid
-  order            Int          @default(0)
-  isActive         Boolean      @default(true) @map("is_active")
-  createdAt        DateTime     @default(now()) @map("created_at")
-  updatedAt        DateTime     @updatedAt @map("updated_at")
+  id          String       @id @default(uuid()) @db.Uuid
+  description String       @db.VarChar(200)
+  type        QuestionType @default(YES_NO)
+  isRequired  Boolean      @default(true) @map("is_required")
+  checklistId String       @map("checklist_id") @db.Uuid // ✅ RENOMEADO (era event_checklist_id)
+  order       Int          @default(0)
+  isActive    Boolean      @default(true) @map("is_active")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
 
   // Relacionamentos
-  eventChecklist    EventChecklist     @relation(fields: [eventChecklistId], references: [id], onDelete: Cascade)
+  checklist         Checklist        @relation(fields: [checklistId], references: [id], onDelete: Cascade) // ✅ MODIFICADO
   questionResponses QuestionResponse[]
 
-  @@index([eventChecklistId])
+  @@index([checklistId]) // ✅ MODIFICADO (era event_checklist_id)
   @@index([order])
   @@index([isActive])
   @@map("questions")

@@ -1,6 +1,10 @@
 // src/presentation/controllers/AuthController.ts
 import { Request, Response, NextFunction } from "express";
-import { CreateUserDto, LoginDto } from "../../application/dtos/AuthDto";
+import {
+  ChangePasswordDto,
+  CreateUserDto,
+  LoginDto,
+} from "../../application/dtos/AuthDto";
 import { AuthService } from "../../application/services/AuthService";
 import { ApiResponse } from "../../shared/utils/response";
 import { AppError } from "../../shared/errors/AppError";
@@ -58,6 +62,58 @@ export class AuthController {
       }
 
       console.error("❌ Login error:", error);
+      res.status(500).json(ApiResponse.error("Internal server error", 500));
+    }
+  }
+
+  // ========================================
+  // ALTERAR SENHA
+  // ========================================
+
+  async changePassword(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      // 1. Verificar se usuário está autenticado
+      const user = req.user;
+      if (!user) {
+        res.status(401).json(ApiResponse.error("User not authenticated", 401));
+        return;
+      }
+
+      // 2. Extrair dados do body
+      const passwordData: ChangePasswordDto = req.body;
+
+      // 3. Validação básica no controller
+      if (!passwordData.newPassword || !passwordData.confirmPassword) {
+        res
+          .status(400)
+          .json(
+            ApiResponse.error("New password and confirmation are required", 400)
+          );
+        return;
+      }
+
+      // 4. Chamar service para mudança de senha
+      const result = await this.authService.changePassword(
+        user.id,
+        passwordData
+      );
+
+      // 5. Resposta de sucesso
+      res.status(200).json(ApiResponse.success(result, result.message));
+    } catch (error) {
+      // 6. Tratamento de erros
+      if (error instanceof AppError) {
+        res
+          .status(error.statusCode)
+          .json(ApiResponse.error(error.message, error.statusCode));
+        return;
+      }
+
+      console.error("❌ Change password error:", error);
       res.status(500).json(ApiResponse.error("Internal server error", 500));
     }
   }

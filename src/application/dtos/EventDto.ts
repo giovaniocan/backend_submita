@@ -64,3 +64,10 @@ export interface PaginatedEventsDto {
   limit: number;
   totalPages: number;
 }
+
+export interface OptionalArgs {
+  search?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}

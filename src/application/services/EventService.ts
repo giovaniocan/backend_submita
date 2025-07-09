@@ -6,15 +6,18 @@ import {
   EventResponseDto,
   ListEventsDto,
   PaginatedEventsDto,
+  OptionalArgs,
 } from "../dtos/EventDto";
-import { Event } from "@prisma/client";
-//import { Event } from "../../generated/prisma";
+import { Article, Event } from "../../generated/prisma";
+import { ChecklistRepository } from "../../infrastructure/repositories/ChecklistRepository";
 
 export class EventService {
   private eventRepository: EventRepository;
+  private checklistRepository: ChecklistRepository; // Adicionei a dependência do ChecklistRepository
 
   constructor() {
     this.eventRepository = new EventRepository();
+    this.checklistRepository = new ChecklistRepository(); // Inicializando o ChecklistRepository
   }
 
   // ========================================
@@ -34,9 +37,12 @@ export class EventService {
   // ========================================
   // READ
   // ========================================
-  
+
   // Buscar evento por ID
-  async getEventById(id: string, includeStats = false): Promise<EventResponseDto> {
+  async getEventById(
+    id: string,
+    includeStats = false
+  ): Promise<EventResponseDto> {
     if (!this.isValidUUID(id)) {
       throw new AppError("Invalid event ID format", 400);
     }
@@ -44,6 +50,86 @@ export class EventService {
     const event = includeStats
       ? await this.eventRepository.findByIdWithStats(id)
       : await this.eventRepository.findById(id);
+
+    if (!event) {
+      throw new AppError("Event not found", 404);
+    }
+
+    return this.toEventResponse(event);
+  }
+
+  async getArticlesByEventId(
+    eventId: string,
+    optionalArgs: OptionalArgs
+  ): Promise<{
+    articles: Article[];
+    pagination: object;
+  }> {
+    const { search, status, page, limit } = optionalArgs;
+    if (!this.isValidUUID(eventId)) {
+      throw new AppError("Invalid event ID format", 400);
+    }
+
+    if (page) {
+      if (!limit) throw new AppError("Limit must be defined", 400);
+      if (isNaN(Number(page))) throw new AppError("Invalid type of page", 400);
+      if (Number(page) <= 0)
+        throw new AppError("Page must be highter than 0", 400);
+    }
+    if (limit) {
+      if (isNaN(Number(limit)))
+        throw new AppError("Invalid type of limit", 400);
+      if (Number(limit) <= 0)
+        throw new AppError("Limit must be highter than 0", 400);
+    }
+
+    const data = await this.eventRepository.findArticlesByEventId(
+      eventId,
+      optionalArgs
+    );
+
+    if (!data) {
+      throw new AppError("Articles not found", 404);
+    }
+    if (data.articles.length == 0) {
+      throw new AppError("Articles not found", 404);
+    }
+
+    let total: number = data.total;
+    let totalPages: number = Math.ceil(total / (limit ?? 1));
+
+    return {
+      articles: data.articles,
+      pagination: {
+        total: total,
+        page,
+        limit,
+        totalPages,
+      },
+    };
+  }
+
+  async getStatsByEventId(id: string): Promise<Object> {
+    if (!this.isValidUUID(id)) {
+      throw new AppError("Invalid event ID format", 400);
+    }
+
+    const stats = await this.eventRepository.findStatsById(id);
+    if (!stats) {
+      throw new AppError("Event not found", 404);
+    }
+    return stats;
+  }
+
+  async getActiveEventById(
+    id: string,
+    includeStats = false
+  ): Promise<EventResponseDto> {
+    if (!this.isValidUUID(id)) {
+      throw new AppError("Invalid event ID format", 400);
+    }
+
+    const event = await this.eventRepository.findActiveById(id);
 
     if (!event) {
       throw new AppError("Event not found", 404);
@@ -92,7 +178,10 @@ export class EventService {
   // ========================================
   // UPDATE
   // ========================================
-  async updateEvent(id: string, eventData: UpdateEventDto): Promise<EventResponseDto> {
+  async updateEvent(
+    id: string,
+    eventData: UpdateEventDto
+  ): Promise<EventResponseDto> {
     if (!this.isValidUUID(id)) {
       throw new AppError("Invalid event ID format", 400);
     }
@@ -117,10 +206,118 @@ export class EventService {
     return this.toEventResponse(updatedEvent);
   }
 
+  // JPF: Editar evento
+  async editEvent(
+    id: string,
+    eventData: UpdateEventDto
+  ): Promise<EventResponseDto> {
+    if (!this.isValidUUID(id)) {
+      throw new AppError("Invalid event ID format", 400);
+    }
+
+    // Verificar se evento existe
+    const existingEvent = await this.eventRepository.findById(id);
+    if (!existingEvent) {
+      throw new AppError("Event not found", 404);
+    }
+
+    // Não permitir que eventos completos sejam editados
+    const status = ["COMPLETED"];
+    if (status.includes(existingEvent.status)) {
+      throw new AppError("Can't edit completed event", 400);
+    }
+
+    const allowedKeys = [
+      "name",
+      "description",
+      "banner",
+      "evaluationType",
+      "status",
+      "eventStartDate",
+      "eventEndDate",
+      "submissionStartDate",
+      "submissionEndDate",
+    ];
+    // Remove objetos desnecessarios do eventData
+    eventData = Object.fromEntries(
+      Object.entries(eventData).filter(([key]) => allowedKeys.includes(key))
+    );
+
+    // Validar dados se fornecidos
+    if (Object.keys(eventData).length === 0) {
+      throw new AppError("No data provided for update", 400);
+    }
+
+    // Validar datas se fornecidas
+    if (this.hasDateFields(eventData)) {
+      this.validateUpdateDates(eventData, existingEvent);
+    }
+
+    let eventStartDate = eventData.eventStartDate;
+    if (!eventStartDate) eventStartDate = existingEvent.eventStartDate;
+
+    let eventEndDate = eventData.eventEndDate;
+    if (!eventEndDate) eventEndDate = existingEvent.eventEndDate;
+
+    let submissionStartDate = eventData.submissionStartDate;
+    if (!submissionStartDate)
+      submissionStartDate = existingEvent.submissionStartDate;
+
+    let submissionEndDate = eventData.submissionEndDate;
+    if (!submissionEndDate) submissionEndDate = existingEvent.submissionEndDate;
+
+    if (eventStartDate > eventEndDate)
+      throw new AppError(
+        "start date can't be higher than end date of event",
+        400
+      );
+    if (submissionEndDate > eventEndDate)
+      throw new AppError(
+        "end submission date can't be higher than end date of event",
+        400
+      );
+    if (submissionStartDate < eventStartDate)
+      throw new AppError(
+        "submission date can't be lower than start date of event",
+        400
+      );
+    if (submissionStartDate > submissionEndDate)
+      throw new AppError(
+        "submission start date can't be higher than submission end date",
+        400
+      );
+
+    // Validar evaluationType
+    if (eventData.evaluationType) {
+      let evaluationTypes = ["DIRECT", "PAIR", "PANEL"];
+      if (!evaluationTypes.includes(eventData.evaluationType)) {
+        throw new AppError("Type of evaluation dosen't exist", 400);
+      }
+    }
+
+    // Validar status
+    if (eventData.status) {
+      let statusTypes = [
+        "DRAFT",
+        "SUBMISSIONS_OPEN",
+        "SUBMISSIONS_CLOSED",
+        "IN_EVALUATION",
+        "COMPLETED",
+        "CANCELLED",
+      ];
+      if (!statusTypes.includes(eventData.status)) {
+        throw new AppError("Type of status dosen't exist", 400);
+      }
+    }
+
+    const updatedEvent = await this.eventRepository.update(id, eventData);
+    return this.toEventResponse(updatedEvent);
+  }
+
   // ========================================
   // DELETE
   // ========================================
-  
+
   // Soft delete (recomendado)
   async softDeleteEvent(id: string): Promise<{ message: string }> {
     if (!this.isValidUUID(id)) {
@@ -164,10 +361,65 @@ export class EventService {
     return { message: "Event deleted permanently" };
   }
 
+  //CHECKLISTS
+
+  async assignChecklistToEvent(
+    eventId: string,
+    checklistId: string
+  ): Promise<EventResponseDto> {
+    const event = await this.eventRepository.findActiveById(eventId);
+    if (!event) {
+      throw new AppError("Event not found or inactive", 404);
+    }
+
+    const checklist = await this.checklistRepository.findActiveById(
+      checklistId
+    );
+    if (!checklist) {
+      throw new AppError("Checklist not found or inactive", 404);
+    }
+
+    // 3️⃣ VERIFICAR SE O EVENTO JÁ TEM UM CHECKLIST
+    if (event.checklistId) {
+      throw new AppError(
+        `Event already has a checklist assigned. Remove the current checklist first.`,
+        400
+      );
+    }
+
+    // 4️⃣ ATRIBUIR O CHECKLIST AO EVENTO
+    const updatedEvent = await this.eventRepository.assignChecklist(
+      eventId,
+      checklistId
+    );
+
+    // 5️⃣ RETORNAR RESPOSTA FORMATADA
+    return this.toEventResponse(updatedEvent);
+  }
+
+  // ========================================
+  // REMOVE CHECKLIST FROM EVENT
+  // ========================================
+  async removeChecklistFromEvent(eventId: string): Promise<EventResponseDto> {
+    const event = await this.eventRepository.findActiveById(eventId);
+    if (!event) {
+      throw new AppError("Event not found or inactive", 404);
+    }
+
+    if (!event.checklistId) {
+      throw new AppError("Event does not have a checklist assigned", 400);
+    }
+
+    // 3️⃣ REMOVER O CHECKLIST DO EVENTO
+    const updatedEvent = await this.eventRepository.removeChecklist(eventId);
+
+    // 4️⃣ RETORNAR RESPOSTA FORMATADA
+    return this.toEventResponse(updatedEvent);
+  }
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================
-  
+
   private validateCreateData(eventData: CreateEventDto): void {
     if (!eventData.name || eventData.name.trim().length < 3) {
       throw new AppError("Event name must have at least 3 characters", 400);
@@ -198,49 +450,35 @@ export class EventService {
     const submissionEnd = new Date(eventData.submissionEndDate);
 
     // Validar se as datas são válidas
-    if (isNaN(eventStart.getTime()) || isNaN(eventEnd.getTime()) ||
-        isNaN(submissionStart.getTime()) || isNaN(submissionEnd.getTime())) {
+    if (
+      isNaN(eventStart.getTime()) ||
+      isNaN(eventEnd.getTime()) ||
+      isNaN(submissionStart.getTime()) ||
+      isNaN(submissionEnd.getTime())
+    ) {
       throw new AppError("Invalid date format", 400);
-    }
-
-    // Data de início do evento deve ser posterior à atual
-    if (eventStart <= now) {
-      throw new AppError("Event start date must be in the future", 400);
-    }
-
-    // Data de fim deve ser posterior à de início
-    if (eventEnd <= eventStart) {
-      throw new AppError("Event end date must be after start date", 400);
-    }
-
-    // Submissões devem estar dentro do período do evento
-    if (submissionStart < eventStart || submissionEnd > eventEnd) {
-      throw new AppError("Submission period must be within event period", 400);
-    }
-
-    // Data de fim das submissões deve ser posterior à de início
-    if (submissionEnd <= submissionStart) {
-      throw new AppError("Submission end date must be after start date", 400);
     }
   }
 
-  private validateUpdateDates(eventData: UpdateEventDto, existingEvent: Event): void {
+  private validateUpdateDates(
+    eventData: UpdateEventDto,
+    existingEvent: Event
+  ): void {
     const eventStart = eventData.eventStartDate || existingEvent.eventStartDate;
     const eventEnd = eventData.eventEndDate || existingEvent.eventEndDate;
-    const submissionStart = eventData.submissionStartDate || existingEvent.submissionStartDate;
-    const submissionEnd = eventData.submissionEndDate || existingEvent.submissionEndDate;
+    const submissionStart =
+      eventData.submissionStartDate || existingEvent.submissionStartDate;
+    const submissionEnd =
+      eventData.submissionEndDate || existingEvent.submissionEndDate;
 
-    // Aplicar as mesmas validações do create
-    if (eventEnd <= eventStart) {
-      throw new AppError("Event end date must be after start date", 400);
-    }
-
-    if (submissionStart < eventStart || submissionEnd > eventEnd) {
-      throw new AppError("Submission period must be within event period", 400);
-    }
-
-    if (submissionEnd <= submissionStart) {
-      throw new AppError("Submission end date must be after start date", 400);
+    // Validar se as datas são válidas
+    if (
+      isNaN(eventStart.getTime()) ||
+      isNaN(eventEnd.getTime()) ||
+      isNaN(submissionStart.getTime()) ||
+      isNaN(submissionEnd.getTime())
+    ) {
+      throw new AppError("Invalid date format", 400);
     }
   }
 
@@ -254,7 +492,8 @@ export class EventService {
   }
 
   private isValidUUID(uuid: string): boolean {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(uuid);
   }
 
