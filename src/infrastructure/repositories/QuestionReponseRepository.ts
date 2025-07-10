@@ -1,7 +1,7 @@
 // src/infrastructure/repositories/QuestionResponseRepository.ts
 
 import { CreateQuestionResponseData } from "../../application/dtos/QuestionResponseDto";
-import { Prisma, QuestionResponse } from "../../generated/prisma";
+import { Prisma, QuestionResponse } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 
 type QuestionResponseWithRelations = Prisma.QuestionResponseGetPayload<{

@@ -1,5 +1,5 @@
 import e from "express";
-import { EventEvaluator } from "../../generated/prisma";
+import { EventEvaluator } from "@prisma/client";
 import { EventEvaluatorRepository } from "../../infrastructure/repositories/EventEvaluatorRepository";
 import { EventRepository } from "../../infrastructure/repositories/EventRepository";
 import { AppError } from "../../shared/errors/AppError";

@@ -1,9 +1,10 @@
 import {
   Article,
+  ArticleStatus,
   ArticleVersion,
   Evaluation,
   Event as PrismaEvent,
-} from "../../generated/prisma";
+} from "@prisma/client";
 import { ArticleEvaluatorAssignmentRepository } from "../../infrastructure/repositories/ArticleEvaluatorAssignmentRepository";
 import { ArticleRepository } from "../../infrastructure/repositories/ArticleRepository";
 import { ArticleVersionRepository } from "../../infrastructure/repositories/ArticleVersionRepository";
@@ -389,7 +390,10 @@ export class EvaluationService {
     this.sendEmailByStatus(finalStatus);
 
     // 3️⃣ ATUALIZAR O ARTIGO COM RESULTADO FINAL
-    await this.articleRepository.updateStatus(articleId, finalStatus);
+    await this.articleRepository.updateStatus(
+      articleId,
+      ArticleStatus.IN_CORRECTION
+    );
 
     return {
       finalGrade,
@@ -579,7 +583,7 @@ export class EvaluationService {
         article: {
           id: evaluation.articleVersion.article.id,
           title: evaluation.articleVersion.article.title,
-          status: evaluation.articleVersion.article.status,
+          status: evaluation.status,
           evaluationsDone: evaluation.articleVersion.article.evaluationsDone,
           event: {
             id: evaluation.articleVersion.article.event.id,

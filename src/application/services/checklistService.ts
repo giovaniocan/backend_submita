@@ -7,7 +7,7 @@ import {
   ChecklistResponseDto,
   ChecklistWithQuestionsDto,
 } from "../dtos/ChecklistDto";
-import { Checklist, Question } from "../../generated/prisma";
+import { Checklist, Question } from "@prisma/client";
 import { create } from "domain";
 
 export class ChecklistService {

@@ -1,4 +1,4 @@
-import { ArticleEvaluatorAssignment } from "../../generated/prisma";
+import { ArticleEvaluatorAssignment } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 
 interface CreateAssignmentData {

@@ -4,7 +4,7 @@ import {
   ListEventsDto,
   OptionalArgs,
 } from "../../application/dtos/EventDto";
-import { Article, Event } from "../../generated/prisma";
+import { Article, Event } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 
 export class EventRepository {

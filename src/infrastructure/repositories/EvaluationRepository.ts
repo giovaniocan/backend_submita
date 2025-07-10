@@ -3,9 +3,8 @@ import {
   ListEvaluationsDto,
   UpdateEvaluationDto,
 } from "../../application/dtos/EvaluationDto";
-import { Evaluation, EvaluationStatus } from "../../generated/prisma";
+import { Evaluation, EvaluationStatus, Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
-import { Prisma } from "../../generated/prisma";
 
 export class EvaluationRepository {
   // Aqui você pode definir os métodos para interagir com o banco de dados
@@ -493,7 +492,7 @@ export class EvaluationRepository {
       rejected: 0,
     };
 
-    byStatus.forEach((item) => {
+    byStatus.forEach((item: any) => {
       switch (item.status) {
         case "APPROVED":
           statusCounts.approved = item._count.id;

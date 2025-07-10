@@ -17,7 +17,7 @@ import {
   DeleteQuestionResponseDto,
   ClearAllChecklistResponsesDto,
 } from "../dtos/QuestionResponseDto";
-import { QuestionResponse, Question, Prisma } from "../../generated/prisma";
+import { QuestionResponse, Question, Prisma } from "@prisma/client";
 import { EvaluationRepository } from "../../infrastructure/repositories/EvaluationRepository";
 
 export class QuestionResponseService {

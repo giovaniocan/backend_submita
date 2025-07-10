@@ -1,7 +1,7 @@
 // src/infrastructure/repositories/ArticleVersionRepository.ts
 
 import { CreateArticleVersionDto } from "../../application/dtos/ArticleVersionDto";
-import { ArticleVersion } from "../../generated/prisma";
+import { ArticleVersion } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 
 export class ArticleVersionRepository {

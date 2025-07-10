@@ -1,6 +1,6 @@
 // src/infrastructure/repositories/UserRepository.ts
 
-import { User, Prisma, RoleType } from "../../generated/prisma";
+import { User, Prisma, RoleType } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import {
   EvaluatorDto,

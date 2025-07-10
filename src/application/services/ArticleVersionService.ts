@@ -2,7 +2,7 @@
 
 import { ArticleVersionRepository } from "../../infrastructure/repositories/ArticleVersionRepository";
 import { AppError } from "../../shared/errors/AppError";
-import { ArticleVersion } from "../../generated/prisma";
+import { ArticleVersion } from "@prisma/client";
 import {
   CreateArticleVersionDto,
   NewVersionResponseDto,

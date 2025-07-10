@@ -2,7 +2,7 @@
 
 import { ArticleKeywordRepository } from "../../infrastructure/repositories/ArticleKeywordRepository";
 import { AppError } from "../../shared/errors/AppError";
-import { ArticleKeyword } from "../../generated/prisma";
+import { ArticleKeyword } from "@prisma/client";
 
 export class ArticleKeywordService {
   private keywordRepository: ArticleKeywordRepository;

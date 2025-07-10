@@ -1,6 +1,6 @@
 // src/infrastructure/repositories/RelatedAuthorRepository.ts
 
-import { RelatedAuthor } from "../../generated/prisma";
+import { RelatedAuthor } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 
 export class RelatedAuthorRepository {

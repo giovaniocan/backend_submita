@@ -1,6 +1,6 @@
 // src/application/dtos/StatsDto.ts
 
-import { ArticleStatus, EvaluationStatus } from "../../generated/prisma";
+import { ArticleStatus, EvaluationStatus } from "@prisma/client";
 
 // DTO para estatísticas do coordinator
 export interface CoordinatorStats {

@@ -2,7 +2,7 @@
 
 import { RelatedAuthorRepository } from "../../infrastructure/repositories/RelatedAuthorService";
 import { AppError } from "../../shared/errors/AppError";
-import { RelatedAuthor } from "../../generated/prisma";
+import { RelatedAuthor } from "@prisma/client";
 
 export class RelatedAuthorService {
   private relatedAuthorRepository: RelatedAuthorRepository;

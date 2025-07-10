@@ -1,3 +1,5 @@
+import { ArticleStatus } from "@prisma/client";
+
 // DTO para criação de artigo
 export interface CreateArticleDto {
   title: string;
@@ -18,12 +20,7 @@ export interface ArticleResponseDto {
   thematicArea?: string;
   currentVersion: number;
   evaluationsDone: number;
-  status:
-    | "SUBMITTED"
-    | "IN_EVALUATION"
-    | "APPROVED"
-    | "IN_CORRECTION"
-    | "REJECTED";
+  status: ArticleStatus;
   eventId: string;
   userId: string;
   isActive: boolean;
@@ -65,12 +62,7 @@ export interface UpdateArticleResponseDto {
   thematicArea?: string;
   currentVersion: number;
   evaluationsDone: number;
-  status:
-    | "SUBMITTED"
-    | "IN_EVALUATION"
-    | "APPROVED"
-    | "IN_CORRECTION"
-    | "REJECTED";
+  status: ArticleStatus;
   eventId: string;
   userId: string;
   isActive: boolean;

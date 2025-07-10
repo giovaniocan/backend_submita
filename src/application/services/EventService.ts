@@ -8,7 +8,7 @@ import {
   PaginatedEventsDto,
   OptionalArgs,
 } from "../dtos/EventDto";
-import { Article, Event } from "../../generated/prisma";
+import { Article, Event } from "@prisma/client";
 import { ChecklistRepository } from "../../infrastructure/repositories/ChecklistRepository";
 
 export class EventService {
@@ -109,17 +109,17 @@ export class EventService {
     };
   }
 
-  async getStatsByEventId(id: string): Promise<Object> {
-    if (!this.isValidUUID(id)) {
-      throw new AppError("Invalid event ID format", 400);
-    }
+  // async getStatsByEventId(id: string): Promise<Object> {
+  //   if (!this.isValidUUID(id)) {
+  //     throw new AppError("Invalid event ID format", 400);
+  //   }
 
-    const stats = await this.eventRepository.findStatsById(id);
-    if (!stats) {
-      throw new AppError("Event not found", 404);
-    }
-    return stats;
-  }
+  //   const stats = await this.eventRepository.findStatsById(id);
+  //   if (!stats) {
+  //     throw new AppError("Event not found", 404);
+  //   }
+  //   return stats;
+  // }
 
   async getActiveEventById(
     id: string,

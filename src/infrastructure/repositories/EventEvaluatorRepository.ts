@@ -1,5 +1,5 @@
 import { ListEventEvaluatorsDto } from "../../application/dtos/EventEvaluatorDto";
-import { EventEvaluator, Prisma, User } from "../../generated/prisma";
+import { EventEvaluator, Prisma, User } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 
 export class EventEvaluatorRepository {

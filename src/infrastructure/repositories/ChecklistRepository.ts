@@ -1,7 +1,7 @@
 // src/infrastructure/repositories/ChecklistRepository.ts
 
 import { CreateChecklistDto } from "../../application/dtos/ChecklistDto";
-import { Checklist } from "../../generated/prisma";
+import { Checklist } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 
 export class ChecklistRepository {

@@ -1,6 +1,6 @@
 // src/infrastructure/repositories/StatsRepository.ts
 
-import { PrismaClient, ArticleStatus, RoleType } from "../../generated/prisma";
+import { PrismaClient, ArticleStatus, RoleType } from "@prisma/client";
 import {
   StudentRecentSubmission,
   EvaluatorRecentEvaluation,
@@ -371,7 +371,7 @@ export class StatsRepository {
       grade: evaluation.grade,
       evaluationDescription: evaluation.evaluationDescription,
       evaluationDate: evaluation.evaluationDate,
-      status: evaluation.articleVersion.article.status,
+      status: evaluation.status, // Status da avaliação (EvaluationStatus)
       createdAt: evaluation.createdAt,
       updatedAt: evaluation.updatedAt,
       articleVersion: {
@@ -387,12 +387,19 @@ export class StatsRepository {
           thematicArea: evaluation.articleVersion.article.thematicArea,
           currentVersion: evaluation.articleVersion.article.currentVersion,
           evaluationsDone: evaluation.articleVersion.article.evaluationsDone,
-          status: evaluation.articleVersion.article.status,
+          status: evaluation.articleVersion.article.status, // Status do artigo (ArticleStatus)
           isActive: evaluation.articleVersion.article.isActive,
           createdAt: evaluation.articleVersion.article.createdAt,
           updatedAt: evaluation.articleVersion.article.updatedAt,
-          event: evaluation.articleVersion.article.event,
-          user: evaluation.articleVersion.article.user,
+          event: {
+            id: evaluation.articleVersion.article.event.id,
+            name: evaluation.articleVersion.article.event.name,
+          },
+          user: {
+            id: evaluation.articleVersion.article.user.id,
+            name: evaluation.articleVersion.article.user.name,
+            email: evaluation.articleVersion.article.user.email,
+          },
         },
       },
     }));

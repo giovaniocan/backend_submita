@@ -1,7 +1,7 @@
 // src/infrastructure/repositories/QuestionRepository.ts
 
 import { CreateQuestionDto } from "../../application/dtos/QuestionDto";
-import { Question } from "../../generated/prisma";
+import { Question } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 
 export class QuestionRepository {

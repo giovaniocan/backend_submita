@@ -1,6 +1,6 @@
 // src/infrastructure/repositories/ArticleKeywordRepository.ts
 
-import { ArticleKeyword } from "../../generated/prisma";
+import { ArticleKeyword } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 
 export class ArticleKeywordRepository {

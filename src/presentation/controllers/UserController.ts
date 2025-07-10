@@ -7,7 +7,7 @@ import { EvaluationService } from "../../application/services/EvaluationService"
 import { ApiResponse } from "../../shared/utils/response";
 import { AppError } from "../../shared/errors/AppError";
 import { ListAvailableEvaluatorsDto } from "../../application/dtos/userDto";
-import { RoleType, User } from "../../generated/prisma";
+import { RoleType, User } from "@prisma/client";
 
 export class UserController {
   private userService: UserService;

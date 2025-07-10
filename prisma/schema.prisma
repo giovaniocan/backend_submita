@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "./src/generated/prisma"
 }
 
 datasource db {
@@ -16,6 +15,7 @@ enum ArticleStatus {
   SUBMITTED      // Submetido
   IN_EVALUATION  // Em Avaliação
   APPROVED       // Aprovado
+  APPROVED_WITH_REMARKS
   IN_CORRECTION // Aprovado com Ressalvas
   REJECTED       // Reprovado
 

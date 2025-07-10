@@ -10,7 +10,7 @@ import { ApiResponse } from "../../shared/utils/response";
 import { AppError } from "../../shared/errors/AppError";
 import { CreateNewVersionDto } from "../../application/dtos/ArticleVersionDto";
 import { ArticleVersionService } from "../../application/services/ArticleVersionService";
-import { ArticleStatus } from "../../generated/prisma";
+import { ArticleStatus } from "@prisma/client";
 
 export class ArticleController {
   private articleService: ArticleService;

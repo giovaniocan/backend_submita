@@ -9,7 +9,7 @@ import {
   PaginatedEvaluatorsDto,
   SimpleUserDto,
 } from "../dtos/userDto";
-import { RoleType, User } from "../../generated/prisma";
+import { RoleType, User } from "@prisma/client";
 
 export class UserService {
   private userRepository: UserRepository;

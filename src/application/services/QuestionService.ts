@@ -10,7 +10,7 @@ import {
   CreateQuestionsResponseDto,
   QuestionDto,
 } from "../dtos/QuestionDto";
-import { Question } from "../../generated/prisma";
+import { Question } from "@prisma/client";
 
 export class QuestionService {
   private questionRepository: QuestionRepository;

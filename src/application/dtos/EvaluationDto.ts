@@ -1,17 +1,18 @@
+import { EvaluationStatus } from "@prisma/client";
 import {
   Article,
   ArticleVersion,
   Evaluation,
   Event,
   User,
-} from "../../generated/prisma";
+} from "@prisma/client";
 
 // DTO para criação de avaliação
 export interface CreateEvaluationDto {
   grade: number; // 0-10
   evaluationDescription?: string; // Comentário/descrição da avaliação (opcional)
   articleVersionId: string; // ID da versão do artigo sendo avaliada
-  status: "TO_CORRECTION" | "APPROVED" | "REJECTED";
+  status: EvaluationStatus;
 
   checklistResponses?: Array<{
     questionId: string;
@@ -122,7 +123,7 @@ export interface ListEvaluationsDto {
   articleId?: string; // Filtrar por artigo específico
   articleVersionId?: string; // Filtrar por versão específica do artigo
   evaluatorId?: string; // Filtrar por avaliador específico
-  status?: "TO_CORRECTION" | "APPROVED" | "REJECTED"; // Filtrar por status
+  status?: EvaluationStatus; // Filtrar por status
   eventId?: string; // Filtrar por evento
   gradeMin?: number; // Nota mínima (0-10)
   gradeMax?: number; // Nota máxima (0-10)
@@ -198,7 +199,7 @@ export interface EvaluationCompletedResponseDto {
 export interface UpdateEvaluationDto {
   grade?: number; // 0-10
   evaluationDescription?: string;
-  status?: "TO_CORRECTION" | "APPROVED" | "REJECTED";
+  status?: EvaluationStatus;
 }
 
 // DTO para resposta de avaliação atualizada

@@ -25,7 +25,7 @@ import {
   ArticleStatus,
   ArticleVersion,
   RelatedAuthor,
-} from "../../generated/prisma";
+} from "@prisma/client";
 import e from "express";
 
 export class ArticleService {

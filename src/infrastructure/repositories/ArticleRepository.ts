@@ -4,7 +4,7 @@ import {
   Article,
   ArticleStatus,
   ArticleEvaluatorAssignment,
-} from "../../generated/prisma";
+} from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 
 interface CreateArticleData {
@@ -14,12 +14,7 @@ interface CreateArticleData {
   eventId: string;
   userId: string;
   currentVersion: number;
-  status:
-    | "SUBMITTED"
-    | "IN_EVALUATION"
-    | "APPROVED"
-    | "IN_CORRECTION"
-    | "REJECTED";
+  status: ArticleStatus;
 }
 
 export class ArticleRepository {
