@@ -235,12 +235,12 @@ export class EvaluationService {
     const now = new Date();
 
     // Validar se ainda está dentro do período do evento
-    if (now < event.eventStartDate) {
-      throw new AppError(
-        "Evaluations cannot be submitted before the event starts",
-        400
-      );
-    }
+    // if (now < event.eventStartDate) {
+    //   throw new AppError(
+    //     "Evaluations cannot be submitted before the event starts",
+    //     400
+    //   );
+    // }
 
     if (now > event.eventEndDate) {
       throw new AppError(
