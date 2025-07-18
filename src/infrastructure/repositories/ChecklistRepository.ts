@@ -97,7 +97,16 @@ export class ChecklistRepository {
       ];
     }
 
-    const include: any = {};
+    const include: any = {
+      _count: {
+        select: {
+          questions: {
+            where: { isActive: true },
+          },
+          events: true,
+        },
+      },
+    };
 
     if (withQuestions) {
       include.questions = {

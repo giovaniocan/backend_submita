@@ -416,6 +416,39 @@ export class EventService {
     // 4️⃣ RETORNAR RESPOSTA FORMATADA
     return this.toEventResponse(updatedEvent);
   }
+
+  // ========================================
+  // ✅ NOVO: GET EVENT CHECKLIST QUESTIONS
+  // ========================================
+  async getEventChecklistQuestions(eventId: string): Promise<any[]> {
+    // 1️⃣ VALIDAR ID DO EVENTO
+    if (!this.isValidUUID(eventId)) {
+      throw new AppError("Invalid event ID format", 400);
+    }
+
+    // 2️⃣ BUSCAR EVENTO
+    const event = await this.eventRepository.findActiveById(eventId);
+    if (!event) {
+      throw new AppError("Event not found or inactive", 404);
+    }
+
+    // 3️⃣ VERIFICAR SE TEM CHECKLIST
+    if (!event.checklistId) {
+      throw new AppError("Event does not have a checklist assigned", 404);
+    }
+
+    // 4️⃣ BUSCAR QUESTÕES DO CHECKLIST
+    const checklist = await this.checklistRepository.findByIdWithQuestions(
+      event.checklistId
+    );
+
+    if (!checklist) {
+      throw new AppError("Checklist not found", 404);
+    }
+
+    // 5️⃣ RETORNAR APENAS AS QUESTÕES ATIVAS
+    return (checklist as any).questions || [];
+  }
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================

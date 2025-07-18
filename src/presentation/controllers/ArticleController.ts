@@ -315,6 +315,76 @@ export class ArticleController {
     }
   }
 
+  async getArticlesForEvaluator(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const user = req.user;
+
+      if (!user) {
+        res.status(401).json(ApiResponse.error("User not authenticated", 401));
+        return;
+      }
+
+      // Verificar se é EVALUATOR
+      if (user.role !== "EVALUATOR") {
+        res
+          .status(403)
+          .json(
+            ApiResponse.error("Only evaluators can access this endpoint", 403)
+          );
+        return;
+      }
+
+      // Extrair filtros da query string
+      const filters = {
+        search: req.query.search as string,
+        status: req.query.status as string,
+        eventId: req.query.eventId as string,
+        page: req.query.page ? parseInt(req.query.page as string) : 1,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
+      };
+
+      // Validações básicas
+      if (filters.page < 1) {
+        res
+          .status(400)
+          .json(ApiResponse.error("Page must be greater than 0", 400));
+        return;
+      }
+
+      if (filters.limit < 1 || filters.limit > 100) {
+        res
+          .status(400)
+          .json(ApiResponse.error("Limit must be between 1 and 100", 400));
+        return;
+      }
+
+      const result = await this.articleService.getArticlesForEvaluator(
+        user.id,
+        filters
+      );
+
+      // Mensagem personalizada
+      let message = `${result.total} article(s) assigned for evaluation`;
+      if (filters.search) {
+        message += ` (searching: "${filters.search}")`;
+      }
+      if (filters.status) {
+        message += ` (status: ${filters.status})`;
+      }
+      if (filters.eventId) {
+        message += ` (event: ${filters.eventId})`;
+      }
+
+      res.status(200).json(ApiResponse.success(result, message));
+    } catch (error) {
+      this.handleError(error, res, "Get articles for evaluator error");
+    }
+  }
+
   async updateArticle(
     req: Request,
     res: Response,
@@ -359,11 +429,26 @@ export class ArticleController {
   async removeEvaluatorFromArticle(req: Request, res: Response): Promise<void> {
     const { articleId } = req.params;
     const { userId } = req.body;
+    const currentUser = req.user;
+
+    if (!currentUser) {
+      res.status(401).json(ApiResponse.error("User not authenticated", 401));
+      return;
+    }
 
     if (!articleId || !userId) {
       res
         .status(400)
         .json(ApiResponse.error("Article ID and evaluator are required", 400));
+      return;
+    }
+
+    // Coordenadores podem remover qualquer avaliador
+    // Avaliadores podem remover apenas a si mesmos
+    if (currentUser.role === "EVALUATOR" && currentUser.id !== userId) {
+      res
+        .status(403)
+        .json(ApiResponse.error("Evaluators can only remove themselves", 403));
       return;
     }
 
@@ -437,7 +522,6 @@ export class ArticleController {
       return;
     }
 
-    console.error(`❌ ${context}:`, error);
     res.status(500).json(ApiResponse.error("Internal server error", 500));
   }
 }

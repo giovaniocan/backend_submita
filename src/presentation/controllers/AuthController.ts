@@ -39,7 +39,6 @@ export class AuthController {
         return;
       }
 
-      console.error("❌ Register error:", error);
       res.status(500).json(ApiResponse.error("Internal server error", 500));
     }
   }
@@ -61,7 +60,6 @@ export class AuthController {
         return;
       }
 
-      console.error("❌ Login error:", error);
       res.status(500).json(ApiResponse.error("Internal server error", 500));
     }
   }
@@ -113,7 +111,6 @@ export class AuthController {
         return;
       }
 
-      console.error("❌ Change password error:", error);
       res.status(500).json(ApiResponse.error("Internal server error", 500));
     }
   }
@@ -148,7 +145,6 @@ export class AuthController {
         return;
       }
 
-      console.error("❌ Profile error:", error);
       res.status(500).json(ApiResponse.error("Internal server error", 500));
     }
   }
@@ -213,7 +209,6 @@ export class AuthController {
         return;
       }
 
-      console.error("❌ Create evaluator error:", error);
       res.status(500).json(ApiResponse.error("Internal server error", 500));
     }
   }

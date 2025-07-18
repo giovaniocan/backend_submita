@@ -126,7 +126,6 @@ export class QuestionService {
         const question = await this.questionRepository.create(questionToCreate);
         added.push(this.toQuestionResponse(question));
       } catch (error) {
-        console.error("Error creating question:", error);
         errors++;
         // Continue processando as outras perguntas
       }

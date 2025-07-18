@@ -79,7 +79,11 @@ export class ArticleRepository {
             coAuthorName: true,
           },
         },
-        versions: true,
+        versions: {
+          orderBy: {
+            version: "desc",
+          },
+        },
         evaluatorAssignments: true,
       },
     });
@@ -176,6 +180,118 @@ export class ArticleRepository {
     });
   }
 
+  async findArticlesForEvaluator(
+    evaluatorId: string,
+    filters: {
+      search?: string;
+      status?: string;
+      eventId?: string;
+      page: number;
+      limit: number;
+    }
+  ): Promise<{ articles: any[]; total: number }> {
+    const skip = (filters.page - 1) * filters.limit;
+
+    // PRIMEIRO: Verificar se o avaliador tem atribuições
+    const assignments = await prisma.articleEvaluatorAssignment.findMany({
+      where: {
+        userId: evaluatorId,
+      },
+      include: {
+        article: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    // ✅ NOVO: Só mostrar artigos que podem ser avaliados
+    // Artigos com status SUBMITTED ou IN_EVALUATION
+    const where: any = {
+      isActive: true,
+      evaluatorAssignments: {
+        some: {
+          userId: evaluatorId,
+          // ✅ NOVO: Só mostrar assignments não corrigidos (não avaliados ainda)
+          isCorrected: false,
+        },
+      },
+      // ✅ IMPORTANTE: Só mostrar artigos que estão prontos para avaliação
+      status: {
+        in: ["SUBMITTED", "IN_EVALUATION"],
+      },
+    };
+
+    // Filtro por evento
+    if (filters.eventId) {
+      where.eventId = filters.eventId;
+    }
+
+    // Filtro por status do artigo (se especificado)
+    if (filters.status) {
+      where.status = filters.status;
+    }
+
+    // Filtro de busca (título)
+    if (filters.search && filters.search.trim()) {
+      where.title = {
+        contains: filters.search.trim(),
+        mode: "insensitive",
+      };
+    }
+
+    // Executar consultas em paralelo
+    const [articles, total] = await Promise.all([
+      prisma.article.findMany({
+        where,
+        include: {
+          event: {
+            select: {
+              id: true,
+              name: true,
+              evaluationType: true,
+            },
+          },
+          // REMOVIDO: dados do usuário autor para privacidade
+          versions: {
+            // ✅ BUSCAR VERSÃO MAIS RECENTE (sempre a currentVersion)
+            orderBy: {
+              version: "desc",
+            },
+            take: 1,
+            select: {
+              id: true,
+              version: true,
+              pdfPath: true,
+              createdAt: true,
+            },
+          },
+          evaluatorAssignments: {
+            where: {
+              userId: evaluatorId,
+            },
+            select: {
+              id: true,
+              assignedAt: true,
+              isCorrected: true,
+            },
+          },
+        },
+        skip,
+        take: filters.limit,
+        orderBy: {
+          createdAt: "desc",
+        },
+      }),
+      prisma.article.count({ where }),
+    ]);
+
+    return { articles, total };
+  }
+
   // ========================================
   // UPDATE
   // ========================================
@@ -190,7 +306,6 @@ export class ArticleRepository {
     id: string,
     articleStatus: ArticleStatus
   ): Promise<Article> {
-    console.log("Updating article status:", id, articleStatus);
     return await prisma.article.update({
       where: { id },
       data: {

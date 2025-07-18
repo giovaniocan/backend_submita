@@ -80,9 +80,7 @@ export class EmailNotificationMiddleware {
                 console.log(
                   `✅ Email de submissão enviado para: ${article.user.email}`
                 );
-              } catch (error) {
-                console.error(`❌ Erro ao enviar email de submissão:`, error);
-              }
+              } catch (error) {}
             });
           }
         }
@@ -127,9 +125,7 @@ export class EmailNotificationMiddleware {
                   console.log(
                     `✅ Email de revisão enviado para: ${article.user.email}`
                   );
-                } catch (error) {
-                  console.error(`❌ Erro ao enviar email de revisão:`, error);
-                }
+                } catch (error) {}
               });
             }
           }

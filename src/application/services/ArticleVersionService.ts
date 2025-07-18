@@ -52,7 +52,6 @@ export class ArticleVersionService {
 
       return createdVersion;
     } catch (error) {
-      console.error("❌ Error creating article version:", error);
       throw new AppError("Failed to create article version", 500);
     }
   }
@@ -74,7 +73,6 @@ export class ArticleVersionService {
 
       return lastVersion;
     } catch (error) {
-      console.error("❌ Error fetching last version:", error);
       throw new AppError("Failed to fetch last version", 500);
     }
   }
@@ -112,9 +110,9 @@ export class ArticleVersionService {
       );
     }
 
-    if (article.status !== "APPROVED_WITH_REMARKS") {
+    if (article.status !== "IN_CORRECTION" && article.status !== "APPROVED_WITH_REMARKS") {
       throw new AppError(
-        "New version can only be created when article status is APPROVED_WITH_REMARKS",
+        "New version can only be created when article status is IN_CORRECTION or APPROVED_WITH_REMARKS",
         400
       );
     }
@@ -145,7 +143,7 @@ export class ArticleVersionService {
         pdfPath: versionData.pdfPath.trim(),
       });
 
-      // 7️⃣ ATUALIZAR CURRENT_VERSION NO ARTIGO
+      // 7️⃣ ATUALIZAR CURRENT_VERSION NO ARTIGO E STATUS
       await this.articleRepository.update(articleId, {
         currentVersion: nextVersion,
         status: "SUBMITTED", // Volta para SUBMITTED para nova avaliação
@@ -182,7 +180,6 @@ export class ArticleVersionService {
 
       return response;
     } catch (error) {
-      console.error("❌ Error creating new version:", error);
       throw new AppError("Failed to create new version", 500);
     }
   }

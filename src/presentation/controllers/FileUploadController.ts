@@ -166,9 +166,7 @@ export class FileUploadController {
 
       let result;
 
-      // Determinar tipo e processar
       if (file.mimetype === "application/pdf") {
-        // Validar tamanho para PDF
         this.fileUploadService.validateFileSize(file.buffer, 20);
 
         result = await this.fileUploadService.uploadPDF(
@@ -177,7 +175,6 @@ export class FileUploadController {
           user.id
         );
       } else if (file.mimetype.startsWith("image/")) {
-        // Validar tamanho para imagem
         this.fileUploadService.validateFileSize(file.buffer, 10);
 
         result = await this.fileUploadService.uploadImage(
@@ -203,6 +200,27 @@ export class FileUploadController {
         .json(ApiResponse.success(result, "File uploaded successfully!"));
     } catch (error) {
       this.handleError(error, res, "File upload error");
+    }
+  }
+
+  // ✅ NOVO: Debug do MinIO
+  async debugMinio(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const user = req.user;
+      if (!user) {
+        res.status(401).json(ApiResponse.error("User not authenticated", 401));
+        return;
+      }
+
+      const debugInfo = await this.fileUploadService.debugConnection();
+
+      res.status(200).json(ApiResponse.success(debugInfo, "MinIO debug info"));
+    } catch (error) {
+      this.handleError(error, res, "MinIO debug error");
     }
   }
 
@@ -311,7 +329,6 @@ export class FileUploadController {
       }
     }
 
-    console.error(`❌ ${context}:`, error);
     res.status(500).json(ApiResponse.error("Internal server error", 500));
   }
 }

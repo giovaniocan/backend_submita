@@ -104,11 +104,21 @@ export class ChecklistController {
       const withQuestions = req.query.withQuestions === "true"; // ✅ NOVA FLAG
       const search = req.query.search as string;
 
+      console.log("🔍 ChecklistController: Getting checklists with:", {
+        isActive,
+        search,
+        withQuestions,
+      });
+
       const checklists = await this.checklistService.getAllChecklists(
         isActive,
         search,
         withQuestions
       );
+
+      // Debug: Log first checklist to see structure
+      if (checklists.length > 0) {
+      }
 
       // 3️⃣ RETORNAR SUCESSO
       const message = withQuestions
@@ -166,7 +176,6 @@ export class ChecklistController {
       return;
     }
 
-    console.error(`❌ ${context}:`, error);
     res.status(500).json(ApiResponse.error("Internal server error", 500));
   }
 }

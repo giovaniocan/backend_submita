@@ -365,6 +365,34 @@ export class EventController {
   }
 
   // ========================================
+  // ✅ NOVO: GET EVENT CHECKLIST QUESTIONS
+  // ========================================
+  async getEventChecklistQuestions(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const eventId = req.params.eventId;
+
+      const questions = await this.eventService.getEventChecklistQuestions(
+        eventId
+      );
+
+      res
+        .status(200)
+        .json(
+          ApiResponse.success(
+            questions,
+            "Event checklist questions retrieved successfully!"
+          )
+        );
+    } catch (error) {
+      this.handleError(error, res, "Get event checklist questions error");
+    }
+  }
+
+  // ========================================
   // MÉTODO PRIVADO PARA TRATAMENTO DE ERROS
   // ========================================
   private handleError(error: unknown, res: Response, context: string): void {
@@ -375,7 +403,6 @@ export class EventController {
       return;
     }
 
-    console.error(`❌ ${context}:`, error);
     res.status(500).json(ApiResponse.error("Internal server error", 500));
   }
 }

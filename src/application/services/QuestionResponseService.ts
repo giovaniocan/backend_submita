@@ -122,7 +122,6 @@ export class QuestionResponseService {
         articleVersionId
       );
     } catch (error) {
-      console.warn("Error fetching checklist responses:", error);
       return null; // Se der erro, retorna null (não quebra a evaluation)
     }
   }
@@ -147,8 +146,6 @@ export class QuestionResponseService {
           await this.questionResponseRepository.findByIdWithRelations(
             responseUpdate.responseId
           );
-
-        console.log("Existing Response", existingResponse);
 
         if (!existingResponse) {
           errors.push({
@@ -221,8 +218,6 @@ export class QuestionResponseService {
           await this.questionResponseRepository.findByIdWithRelations(
             updatedResponse.id
           );
-
-        console.log("Complete Response:", completeResponse);
 
         if (completeResponse) {
           updated.push({
@@ -345,7 +340,6 @@ export class QuestionResponseService {
 
       return response;
     } catch (error) {
-      console.error("❌ Error deleting question response:", error);
       throw new AppError("Failed to delete question response", 500);
     }
   }
@@ -494,7 +488,6 @@ export class QuestionResponseService {
     question: any
   ): void {
     const questionType = question.type;
-    console.log("CHEGOU AQUI PELO MENOS", questionType);
     switch (questionType) {
       case "YES_NO":
         if (responseData.booleanResponse === undefined) {

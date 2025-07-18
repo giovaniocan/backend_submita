@@ -30,9 +30,6 @@ export class EvaluationController {
       }: CreateEvaluationDto = req.body;
       const user = req.user;
 
-      console.log("Request body:", req.body);
-      console.log("User from token:", user);
-
       if (!user) {
         res.status(401).json(ApiResponse.error("User not authenticated", 401));
         return;
@@ -245,6 +242,12 @@ export class EvaluationController {
         return;
       }
 
+      console.log(`🔍 [getEvaluationsWithFilters] Usuário autenticado:`, {
+        id: user.id,
+        role: user.role,
+        query: req.query,
+      });
+
       // 2️⃣ EXTRAIR FILTROS DA QUERY STRING
       const filters: ListEvaluationsDto = {
         page: req.query.page ? parseInt(req.query.page as string) : undefined,
@@ -330,6 +333,12 @@ export class EvaluationController {
       }
 
       // 6️⃣ RESPOSTA
+      console.log(`✅ [getEvaluationsWithFilters] Enviando resposta:`, {
+        totalEvaluations: result.total,
+        evaluationsReturned: result.evaluations.length,
+        message,
+      });
+
       res.status(200).json(ApiResponse.success(result, message));
     } catch (error) {
       this.handleError(error, res, "Get evaluations with filters error");
@@ -395,6 +404,77 @@ export class EvaluationController {
     }
   }
 
+  // ✅ NOVO: Buscar minha avaliação para um artigo específico
+  async getMyEvaluationForArticle(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const user = req.user;
+      if (!user) {
+        res.status(401).json(ApiResponse.error("User not authenticated", 401));
+        return;
+      }
+
+      // Verificar se é EVALUATOR
+      if (user.role !== "EVALUATOR") {
+        res
+          .status(403)
+          .json(
+            ApiResponse.error("Only evaluators can use this endpoint", 403)
+          );
+        return;
+      }
+
+      const { articleVersionId } = req.params;
+      if (!articleVersionId || !this.isValidUUID(articleVersionId)) {
+        res
+          .status(400)
+          .json(ApiResponse.error("Valid article version ID is required", 400));
+        return;
+      }
+
+      // Buscar avaliação específica do usuário para esta versão do artigo
+      const filters: ListEvaluationsDto = {
+        articleVersionId: articleVersionId,
+        evaluatorId: user.id,
+        page: 1,
+        limit: 1,
+      };
+
+      const result = await this.evaluationService.getEvaluationsWithFilters(
+        filters,
+        user.id,
+        user.role
+      );
+
+      if (result.evaluations.length === 0) {
+        res
+          .status(404)
+          .json(
+            ApiResponse.error(
+              "No evaluation found for this article version",
+              404
+            )
+          );
+        return;
+      }
+
+      // Retornar apenas a primeira (e única) avaliação
+      res
+        .status(200)
+        .json(
+          ApiResponse.success(
+            result.evaluations[0],
+            "Evaluation retrieved successfully!"
+          )
+        );
+    } catch (error) {
+      this.handleError(error, res, "Get my evaluation for article error");
+    }
+  }
+
   // ========================================
   // MÉTODO DE CONVENIÊNCIA - AVALIAÇÕES DE UM ARTIGO
   // ========================================
@@ -430,7 +510,12 @@ export class EvaluationController {
         user.role
       );
 
-      console.log("Result:", result);
+      console.log(`📊 [getArticleEvaluations] Result:`, {
+        total: result.total,
+        evaluationsCount: result.evaluations.length,
+        userRole: user.role,
+        articleId,
+      });
 
       res
         .status(200)
@@ -608,6 +693,68 @@ export class EvaluationController {
     }
   }
 
+  async getPendingEvaluations(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const user = req.user;
+      if (!user) {
+        res.status(401).json(ApiResponse.error("User not authenticated", 401));
+        return;
+      }
+
+      // Verificar se é EVALUATOR
+      if (user.role !== "EVALUATOR") {
+        res
+          .status(403)
+          .json(
+            ApiResponse.error("Only evaluators can access this endpoint", 403)
+          );
+        return;
+      }
+
+      // Extrair filtros
+      const filters = {
+        page: req.query.page ? parseInt(req.query.page as string) : 1,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
+        eventId: req.query.eventId as string,
+      };
+
+      // Validar filtros
+      if (filters.page < 1) {
+        res
+          .status(400)
+          .json(ApiResponse.error("Page must be greater than 0", 400));
+        return;
+      }
+
+      if (filters.limit < 1 || filters.limit > 100) {
+        res
+          .status(400)
+          .json(ApiResponse.error("Limit must be between 1 and 100", 400));
+        return;
+      }
+
+      const result = await this.evaluationService.getPendingEvaluationsForUser(
+        user.id,
+        filters
+      );
+
+      res
+        .status(200)
+        .json(
+          ApiResponse.success(
+            result,
+            `${result.total} pending evaluation(s) found`
+          )
+        );
+    } catch (error) {
+      this.handleError(error, res, "Get pending evaluations error");
+    }
+  }
+
   private handleError(error: unknown, res: Response, context: string): void {
     if (error instanceof AppError) {
       res
@@ -616,7 +763,6 @@ export class EvaluationController {
       return;
     }
 
-    console.error(`❌ ${context}:`, error);
     res.status(500).json(ApiResponse.error("Internal server error", 500));
   }
 }

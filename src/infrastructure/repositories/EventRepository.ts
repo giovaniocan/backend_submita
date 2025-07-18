@@ -163,6 +163,26 @@ export class EventRepository {
         include: {
           keywords: true,
           relatedAuthors: true,
+          evaluatorAssignments: {
+            include: {
+              eventEvaluator: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              evaluatorAssignments: true,
+            },
+          },
         },
         skip: page && limit ? (page - 1) * limit : undefined,
         take: limit ?? undefined,

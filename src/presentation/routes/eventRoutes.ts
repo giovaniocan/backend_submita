@@ -168,4 +168,15 @@ router.delete(
   }
 );
 
+// ========================================
+// ✅ NOVA ROTA: Buscar questões do checklist do evento
+// ========================================
+router.get(
+  "/:eventId/checklist/questions",
+  authenticate,
+  async (req, res, next) => {
+    await eventController.getEventChecklistQuestions(req, res, next);
+  }
+);
+
 export { router as eventRoutes };

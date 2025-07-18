@@ -43,8 +43,6 @@ export class EmailService {
         pass: process.env.EMAIL_PASS, // Senha de app do Gmail
       },
     });
-
-    console.log("✅ Email transporter configurado com sucesso");
   }
 
   // ========================================
@@ -63,14 +61,8 @@ export class EmailService {
         html: options.html,
       };
 
-      console.log(`📧 Enviando email para: ${options.to}`);
-      console.log(`📧 Assunto: ${options.subject}`);
-
       const result = await this.transporter.sendMail(mailOptions);
-
-      console.log("✅ Email enviado com sucesso:", result.messageId);
     } catch (error) {
-      console.error("❌ Erro ao enviar email:", error);
       throw new AppError("Failed to send email", 500);
     }
   }
@@ -389,10 +381,8 @@ export class EmailService {
   async testConnection(): Promise<boolean> {
     try {
       await this.transporter.verify();
-      console.log("✅ Conexão com servidor de email verificada");
       return true;
     } catch (error) {
-      console.error("❌ Erro na conexão com servidor de email:", error);
       return false;
     }
   }

@@ -148,7 +148,6 @@ export class ArticleService {
 
       return response;
     } catch (error) {
-      console.error("❌ Error creating article:", error);
       throw new AppError("Failed to create article", 500);
     }
   }
@@ -162,7 +161,6 @@ export class ArticleService {
       const articles = await this.articleRepository.findByUserId(userId);
       return articles;
     } catch (error) {
-      console.error("❌ Error getting articles by user ID:", error);
       throw new AppError("Failed to get articles by user ID", 500);
     }
   }
@@ -282,7 +280,6 @@ export class ArticleService {
           assignedAt: newAssignment.assignedAt,
         });
       } catch (error) {
-        console.error(`Error assigning evaluator ${evaluatorId}:`, error);
         errors.push(`Error assigning evaluator ${evaluatorId}`);
       }
     }
@@ -303,6 +300,17 @@ export class ArticleService {
       skipped,
       errors,
     };
+
+    // 🔄 SE PELO MENOS UM AVALIADOR FOI ATRIBUÍDO, MUDAR STATUS PARA IN_EVALUATION
+    if (assigned.length > 0) {
+      try {
+        await this.articleRepository.update(articleId, {
+          status: "IN_EVALUATION" as ArticleStatus,
+        });
+      } catch (error) {
+        // Não falhar a operação inteira por causa disso
+      }
+    }
 
     return response;
   }
@@ -383,7 +391,6 @@ export class ArticleService {
 
       return await this.getFullArticleForUpdate(articleId);
     } catch (error) {
-      console.error("❌ Error updating article:", error);
       throw new AppError("Failed to update article", 500);
     }
   }
@@ -414,9 +421,9 @@ export class ArticleService {
       throw new AppError("Article not found", 404);
     }
 
-    if (article.status !== "SUBMITTED") {
+    if (article.status !== "SUBMITTED" && article.status !== "IN_EVALUATION") {
       throw new AppError(
-        "Article must be in SUBMITTED status to remove evaluators",
+        "Article must be in SUBMITTED or IN_EVALUATION status to remove evaluators",
         400
       );
     }
@@ -426,14 +433,26 @@ export class ArticleService {
         articleId,
         assignment.userId
       );
+
       const evaluatorDeleted =
         await this.assignmentRepository.findByArticleAndUser(articleId, userId);
       if (evaluatorDeleted) {
         throw new AppError("Failed to remove evaluator from article", 500);
       }
+
+      // Verificar se ainda há avaliadores atribuídos
+      const remainingAssignments =
+        await this.assignmentRepository.countByArticleId(articleId);
+
+      // Se não há mais avaliadores atribuídos, voltar para SUBMITTED
+      if (remainingAssignments === 0) {
+        await this.articleRepository.update(articleId, {
+          status: "SUBMITTED" as ArticleStatus,
+        });
+      }
+
       return true;
     } catch (error) {
-      console.error("❌ Error removing evaluator from article:", error);
       return false;
     }
   }
@@ -532,6 +551,47 @@ export class ArticleService {
 
     return { articles };
   }
+
+  async getArticlesForEvaluator(
+    evaluatorId: string,
+    filters: {
+      search?: string;
+      status?: string;
+      eventId?: string;
+      page: number;
+      limit: number;
+    }
+  ): Promise<{
+    articles: any[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    if (!this.isValidUUID(evaluatorId)) {
+      throw new AppError("Invalid evaluator ID format", 400);
+    }
+
+    try {
+      // Buscar artigos atribuídos ao avaliador
+      const result = await this.articleRepository.findArticlesForEvaluator(
+        evaluatorId,
+        filters
+      );
+
+      const totalPages = Math.ceil(result.total / filters.limit);
+
+      return {
+        articles: result.articles,
+        total: result.total,
+        page: filters.page,
+        limit: filters.limit,
+        totalPages,
+      };
+    } catch (error) {
+      throw new AppError("Failed to get articles for evaluator", 500);
+    }
+  }
   // ========================================
   // MÉTODOS PRIVADOS
   // ========================================
@@ -601,7 +661,7 @@ export class ArticleService {
   }
 
   private canEditArticle(status: string): boolean {
-    // Artigo só pode ser editado se estiver SUBMITTED ou APPROVED_WITH_REMARKS
+    // Artigo só pode ser editado se estiver SUBMITTED ou IN_CORRECTION
     return status === "SUBMITTED" || status === "IN_CORRECTION";
   }
 

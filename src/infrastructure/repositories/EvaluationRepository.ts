@@ -86,10 +86,8 @@ export class EvaluationRepository {
         include: this.buildIncludeRelations(),
       });
 
-      console.log(`✅ Evaluation ${evaluationId} updated successfully`);
       return updatedEvaluation;
     } catch (error) {
-      console.error("❌ Error updating evaluation:", error);
       throw new Error("Failed to update evaluation");
     }
   }
@@ -204,7 +202,6 @@ export class EvaluationRepository {
 
       return count;
     } catch (error) {
-      console.error("❌ Error counting evaluations by article version:", error);
       throw new Error("Failed to count evaluations");
     }
   }
@@ -215,10 +212,7 @@ export class EvaluationRepository {
       await prisma.evaluation.delete({
         where: { id: evaluationId },
       });
-
-      console.log(`✅ Evaluation ${evaluationId} deleted successfully`);
     } catch (error) {
-      console.error("❌ Error deleting evaluation:", error);
       throw new Error("Failed to delete evaluation");
     }
   }
@@ -252,6 +246,27 @@ export class EvaluationRepository {
       prisma.evaluation.count({ where }),
     ]);
 
+    console.log("📊 [findManyWithFilters] Resultado:", {
+      totalEncontradas: evaluations.length,
+      totalNoDb: total,
+      skip,
+      limit,
+      page,
+      withChecklistResponses,
+    });
+
+    // Log das avaliações encontradas
+    if (evaluations.length > 0) {
+      evaluations.forEach((evaluation, index) => {
+        if ((evaluation as any).articleVersion?.questionResponses?.length > 0) {
+          (evaluation as any).articleVersion.questionResponses.forEach(
+            (qr: any, qrIndex: number) => {}
+          );
+        }
+      });
+    } else {
+    }
+
     return { evaluations, total };
   }
 
@@ -275,8 +290,19 @@ export class EvaluationRepository {
       articleVersionWhere.articleId = filters.articleId;
     }
 
+    // ✅ FILTRAR por autor do artigo (para STUDENTs)
+    if ((filters as any).authorId) {
+      if (!articleVersionWhere.article) {
+        articleVersionWhere.article = {};
+      }
+      articleVersionWhere.article.userId = (filters as any).authorId;
+    }
+
     if (filters.eventId) {
-      articleVersionWhere.article = { eventId: filters.eventId };
+      if (!articleVersionWhere.article) {
+        articleVersionWhere.article = {};
+      }
+      articleVersionWhere.article.eventId = filters.eventId;
     }
 
     if (Object.keys(articleVersionWhere).length > 0) {
@@ -325,6 +351,7 @@ export class EvaluationRepository {
               title: true,
               status: true,
               evaluationsDone: true,
+              userId: true, // Incluir ID do autor para verificação de permissão
               event: {
                 select: {
                   id: true,

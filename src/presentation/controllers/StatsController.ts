@@ -96,8 +96,6 @@ export class StatsController {
   // ERROR HANDLER
   // ========================================
   private handleError(error: any, res: Response, context: string): void {
-    console.error(`${context}:`, error);
-
     if (error instanceof AppError) {
       res
         .status(error.statusCode)

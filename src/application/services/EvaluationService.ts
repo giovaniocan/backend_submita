@@ -154,9 +154,6 @@ export class EvaluationService {
         | "IN_EVALUATION";
       finalStatus = "IN_EVALUATION";
 
-      console.log("avaliacoes feitas", updatedArticle.evaluationsDone);
-      console.log("total de avaliacoes necessarias", totalEvaluationsNeeded);
-
       if (updatedArticle.evaluationsDone >= totalEvaluationsNeeded) {
         // ✅ TODAS AS AVALIAÇÕES CONCLUÍDAS - FINALIZAR ARTIGO
         const result = await this.finalizeArticle(
@@ -180,7 +177,6 @@ export class EvaluationService {
         completedEvaluations: updatedArticle.evaluationsDone,
       };
     } catch (error) {
-      console.error("❌ Error creating evaluation:", error);
       if (error instanceof AppError) {
         throw error;
       }
@@ -378,8 +374,6 @@ export class EvaluationService {
         articleVersionId
       );
 
-    console.log("Avaliações encontradas:", evaluations);
-
     if (evaluations.length === 0) {
       throw new AppError("No evaluations found for this article", 500);
     }
@@ -392,7 +386,7 @@ export class EvaluationService {
     // 3️⃣ ATUALIZAR O ARTIGO COM RESULTADO FINAL
     await this.articleRepository.updateStatus(
       articleId,
-      ArticleStatus.IN_CORRECTION
+      finalStatus as ArticleStatus
     );
 
     return {
@@ -597,8 +591,13 @@ export class EvaluationService {
 
     // ✅ INCLUIR checklistResponses se existirem
     if (evaluation.articleVersion?.questionResponses?.length > 0) {
-      response.checklistResponses =
-        evaluation.articleVersion.questionResponses.map((qr: any) => ({
+      // ✅ FILTRAR apenas respostas do avaliador atual
+      const userResponses = evaluation.articleVersion.questionResponses.filter(
+        (qr: any) => qr.userId === evaluation.userId
+      );
+
+      if (userResponses.length > 0) {
+        response.checklistResponses = userResponses.map((qr: any) => ({
           id: qr.id,
           questionId: qr.questionId,
           booleanResponse: qr.booleanResponse ?? undefined,
@@ -610,6 +609,7 @@ export class EvaluationService {
             order: qr.question.order,
           },
         }));
+      }
     }
 
     return response;
@@ -824,8 +824,6 @@ export class EvaluationService {
     const rules = EvaluationService.BUSINESS_RULES.CASCADE_ACTIONS;
 
     await prisma.$transaction(async (tx) => {
-      console.log(`🔄 Executing evaluation deletion transaction...`);
-
       // 1. Deletar question responses (se habilitado)
       if (rules.DELETE_QUESTION_RESPONSES) {
         await tx.questionResponse.deleteMany({
@@ -834,14 +832,12 @@ export class EvaluationService {
             articleVersionId: evaluation.articleVersionId,
           },
         });
-        console.log("✅ Question responses deleted");
       }
 
       // 2. Deletar avaliação
       await tx.evaluation.delete({
         where: { id: evaluation.id },
       });
-      console.log("✅ Evaluation deleted");
 
       // 3. Reset assignment status (se habilitado)
       if (rules.RESET_ASSIGNMENT_STATUS) {
@@ -852,7 +848,6 @@ export class EvaluationService {
           },
           data: { isCorrected: false },
         });
-        console.log("✅ Assignment status reset");
       }
 
       // 4. Recalcular status do artigo (se habilitado)
@@ -1035,7 +1030,10 @@ export class EvaluationService {
       throw new AppError("Valid user ID is required", 400);
     }
 
-    if (!userRole || !["EVALUATOR", "COORDINATOR"].includes(userRole)) {
+    if (
+      !userRole ||
+      !["EVALUATOR", "COORDINATOR", "STUDENT"].includes(userRole)
+    ) {
       throw new AppError("Invalid user role for this operation", 403);
     }
   }
@@ -1056,6 +1054,19 @@ export class EvaluationService {
         throw new AppError("You can only view your own evaluations", 403);
       }
       return;
+    }
+
+    // STUDENTS podem ver avaliações dos próprios artigos
+    if (currentUserRole === "STUDENT") {
+      // Verificar se o artigo pertence ao estudante
+      const articleOwnerId = evaluation.articleVersion?.article?.userId;
+      if (articleOwnerId === currentUserId) {
+        return;
+      }
+      throw new AppError(
+        "You can only view evaluations of your own articles",
+        403
+      );
     }
 
     throw new AppError("Insufficient permissions to view evaluations", 403);
@@ -1138,7 +1149,16 @@ export class EvaluationService {
       secureFilters.evaluatorId = currentUserId;
     }
 
+    // STUDENTS só podem ver avaliações dos próprios artigos
+    if (currentUserRole === "STUDENT") {
+      // ✅ CORRIGIDO: Usar authorId personalizado que será mapeado no repository
+      (secureFilters as any).authorId = currentUserId;
+    }
+
     // COORDINATORS podem ver todas (sem restrições adicionais)
+    if (currentUserRole === "COORDINATOR") {
+    }
+
     return secureFilters;
   }
 
@@ -1345,6 +1365,80 @@ export class EvaluationService {
     return {
       statusChanged: true,
       newStatus,
+    };
+  }
+
+  // ========================================
+  // MÉTODO PARA BUSCAR AVALIAÇÕES PENDENTES
+  // ========================================
+  async getPendingEvaluationsForUser(
+    userId: string,
+    filters?: {
+      page?: number;
+      limit?: number;
+      eventId?: string;
+    }
+  ): Promise<{
+    pendingEvaluations: any[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    // Validar entrada
+    if (!userId || !this.isValidUUID(userId)) {
+      throw new AppError("Valid user ID is required", 400);
+    }
+
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 10;
+    const skip = (page - 1) * limit;
+
+    // Buscar assignments pendentes
+    const pendingAssignments =
+      await this.assignmentRepository.findPendingWithArticleDetails(userId);
+
+    // Filtrar por evento se necessário
+    let filteredAssignments = pendingAssignments;
+    if (filters?.eventId) {
+      filteredAssignments = pendingAssignments.filter(
+        (assignment) => assignment.article.eventId === filters.eventId
+      );
+    }
+
+    // Aplicar paginação
+    const total = filteredAssignments.length;
+    const paginatedAssignments = filteredAssignments.slice(skip, skip + limit);
+
+    // Transformar para formato similar ao de evaluations
+    const pendingEvaluations = paginatedAssignments.map((assignment) => ({
+      id: `pending-${assignment.id}`,
+      isPending: true,
+      assignmentId: assignment.id,
+      articleVersionId: assignment.article.versions[0]?.id,
+      createdAt: assignment.createdAt,
+      articleVersion: {
+        id: assignment.article.versions[0]?.id,
+        version:
+          assignment.article.versions[0]?.version ||
+          assignment.article.currentVersion,
+        article: {
+          id: assignment.article.id,
+          title: assignment.article.title,
+          status: assignment.article.status,
+          evaluationsDone: assignment.article.evaluationsDone,
+          event: assignment.article.event,
+          user: assignment.article.user,
+        },
+      },
+    }));
+
+    return {
+      pendingEvaluations,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
     };
   }
 }

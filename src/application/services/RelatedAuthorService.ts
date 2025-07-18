@@ -47,7 +47,6 @@ export class RelatedAuthorService {
 
       return createdAuthors;
     } catch (error) {
-      console.error("❌ Error creating related authors:", error);
       throw new AppError("Failed to create related authors", 500);
     }
   }

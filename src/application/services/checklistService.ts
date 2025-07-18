@@ -64,6 +64,11 @@ export class ChecklistService {
     withQuestions: boolean = false
   ): Promise<ChecklistResponseDto[]> {
     // 1️⃣ BUSCAR CHECKLISTS COM FILTROS
+    console.log("🔍 ChecklistService: Getting checklists with:", {
+      isActive,
+      search,
+      withQuestions,
+    });
 
     const checklists = await this.checklistRepository.findAllWithFilters(
       isActive,
@@ -71,10 +76,16 @@ export class ChecklistService {
       withQuestions
     );
 
+    // Debug: Log estrutura do primeiro checklist
+    if (checklists.length > 0) {
+    }
+
     if (withQuestions) {
-      return checklists.map((checklist: Checklist) =>
+      const result = checklists.map((checklist: Checklist) =>
         this.toChecklistResponsewithQuestions(checklist)
       );
+
+      return result;
     } else {
       return checklists.map((checklist: Checklist) =>
         this.toChecklistResponse(checklist)

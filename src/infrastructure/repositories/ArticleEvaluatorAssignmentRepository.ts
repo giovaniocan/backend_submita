@@ -164,7 +164,7 @@ export class ArticleEvaluatorAssignmentRepository {
     const assignments = await this.findByArticleId(articleId);
 
     if (assignments.length === 0) {
-      throw new Error("No assignments found for this article");
+      return; // Não é erro se não há assignments
     }
 
     for (const assignment of assignments) {
@@ -227,7 +227,6 @@ export class ArticleEvaluatorAssignmentRepository {
 
       return updatedAssignment!;
     } catch (error) {
-      console.error("❌ Error marking assignment as corrected:", error);
       throw new Error("Failed to mark assignment as corrected");
     }
   }
@@ -262,7 +261,6 @@ export class ArticleEvaluatorAssignmentRepository {
 
       return updatedAssignment!;
     } catch (error) {
-      console.error("❌ Error marking assignment as uncorrected:", error);
       throw new Error("Failed to mark assignment as uncorrected");
     }
   }
@@ -289,5 +287,61 @@ export class ArticleEvaluatorAssignmentRepository {
   async exists(articleId: string, userId: string): Promise<boolean> {
     const assignment = await this.findByArticleAndUser(articleId, userId);
     return !!assignment;
+  }
+
+  // Buscar assignments pendentes com detalhes do artigo
+  async findPendingWithArticleDetails(userId: string): Promise<any[]> {
+    return await prisma.articleEvaluatorAssignment.findMany({
+      where: {
+        userId: userId,
+        isCorrected: false,
+        article: {
+          isActive: true,
+          status: {
+            in: ["SUBMITTED", "IN_EVALUATION"],
+          },
+        },
+      },
+      include: {
+        article: {
+          include: {
+            versions: {
+              orderBy: { version: "desc" },
+              take: 1,
+              select: {
+                id: true,
+                version: true,
+                pdfPath: true,
+                createdAt: true,
+              },
+            },
+            event: {
+              select: {
+                id: true,
+                name: true,
+                evaluationType: true,
+              },
+            },
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        eventEvaluator: {
+          select: {
+            id: true,
+            eventId: true,
+            isActive: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
   }
 }

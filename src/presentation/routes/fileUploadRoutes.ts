@@ -29,6 +29,15 @@ router.post(
   }
 );
 
+// ✅ NOVA ROTA: Debug - testar conexão com MinIO
+router.get(
+  "/debug/minio",
+  authenticate,
+  async (req, res, next) => {
+    await fileUploadController.debugMinio(req, res, next);
+  }
+);
+
 // Upload específico de imagem
 router.post(
   "/upload/image",

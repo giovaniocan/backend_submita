@@ -446,7 +446,6 @@ export class QuestionResponseController {
     next: NextFunction
   ): Promise<void> {
     try {
-      console.log("CHEGOU AQUI PELO MENOS");
       const user = req.user;
       if (!user) {
         res.status(401).json(ApiResponse.error("User not authenticated", 401));
@@ -455,7 +454,6 @@ export class QuestionResponseController {
 
       const { responseId } = req.params;
 
-      console.log("ID DA RESPOSTA", responseId);
       // ========================================pqest
       // VALIDAÇÕES BÁSICAS
       // ========================================
@@ -553,7 +551,6 @@ export class QuestionResponseController {
       return;
     }
 
-    console.error(`❌ ${context}:`, error);
     res.status(500).json(ApiResponse.error("Internal server error", 500));
   }
 }

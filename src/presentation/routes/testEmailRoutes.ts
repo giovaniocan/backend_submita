@@ -36,7 +36,6 @@ router.post(
           .json(ApiResponse.error("Email connection failed ❌", 500));
       }
     } catch (error) {
-      console.error("Test email error:", error);
       res.status(500).json(ApiResponse.error("Email test failed", 500));
     }
   }
@@ -118,7 +117,6 @@ router.post(
         )
       );
     } catch (error) {
-      console.error("Send test email error:", error);
       res.status(500).json(ApiResponse.error("Failed to send test email", 500));
     }
   }

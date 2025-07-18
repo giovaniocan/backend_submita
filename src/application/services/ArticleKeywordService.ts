@@ -44,7 +44,6 @@ export class ArticleKeywordService {
 
       return createdKeywords;
     } catch (error) {
-      console.error("❌ Error creating keywords:", error);
       throw new AppError("Failed to create keywords", 500);
     }
   }

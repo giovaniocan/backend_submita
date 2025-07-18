@@ -56,7 +56,6 @@ export class StatsService {
 
       return coordinatorStats;
     } catch (error) {
-      console.error("Error getting coordinator stats:", error);
       throw new AppError("Failed to retrieve coordinator statistics", 500);
     }
   }
@@ -99,8 +98,6 @@ export class StatsService {
 
       return studentStats;
     } catch (error) {
-      console.error("Error getting student stats:", error);
-
       // Se o erro já é um AppError, re-throw
       if (error instanceof AppError) {
         throw error;
@@ -148,8 +145,6 @@ export class StatsService {
 
       return evaluatorStats;
     } catch (error) {
-      console.error("Error getting evaluator stats:", error);
-
       // Se o erro já é um AppError, re-throw
       if (error instanceof AppError) {
         throw error;

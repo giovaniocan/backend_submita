@@ -4,6 +4,7 @@ import {
   authenticate,
   requireCoordinator,
   requireStudent,
+  requireStaff,
 } from "../middlewares/authMiddleware";
 import { ArticleController } from "../controllers/ArticleController";
 
@@ -14,12 +15,12 @@ const router = Router();
 router.get("/:articleId",
   authenticate,
   // requireStudent(),
-  async (req, res, next) => {
+  async (req, res, next): Promise<void> => {
   await articleController.getArticlesById(req, res, next);
 });
 
 // Criar evento (apenas COORDINATOR)
-router.post("/", authenticate, requireStudent(), async (req, res, next) => {
+router.post("/", authenticate, requireStudent(), async (req, res, next): Promise<void> => {
   await articleController.createArticle(req, res, next);
 });
 
@@ -27,7 +28,7 @@ router.post(
   "/:articleId/evaluators",
   authenticate,
   requireCoordinator(),
-  async (req, res, next) => {
+  async (req, res, next): Promise<void> => {
     await articleController.assignEvaluatorsToArticle(req, res, next);
   }
 );
@@ -35,8 +36,8 @@ router.post(
 router.delete(
   "/:articleId/evaluators",
   authenticate,
-  requireCoordinator(),
-  async (req, res, next) => {
+  requireStaff(), // Permite COORDINATOR e EVALUATOR
+  async (req, res, next): Promise<void> => {
     await articleController.removeEvaluatorFromArticle(req, res);
   }
 );
@@ -46,7 +47,7 @@ router.put(
   "/:articleId/new-version",
   authenticate,
   requireStudent(),
-  async (req, res, next) => {
+  async (req, res, next): Promise<void> => {
     await articleController.createNewVersion(req, res, next);
   }
 );
@@ -56,7 +57,7 @@ router.put(
   "/:articleId",
   authenticate,
   requireStudent(), // ou requireStudent() dependendo da regra
-  async (req, res, next) => {
+  async (req, res, next): Promise<void> => {
     await articleController.updateArticle(req, res, next);
   }
 );

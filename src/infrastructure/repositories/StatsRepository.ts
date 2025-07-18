@@ -218,7 +218,7 @@ export class StatsRepository {
       where: {
         userId: userId,
         isActive: true,
-        status: ArticleStatus.IN_EVALUATION,
+        status: ArticleStatus.APPROVED_WITH_REMARKS,
       },
     });
   }

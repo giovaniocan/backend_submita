@@ -86,8 +86,6 @@ export class AuthMiddleware {
 
       next();
     } catch (error) {
-      console.error("❌ Auth middleware error:", error);
-
       if (error instanceof jwt.JsonWebTokenError) {
         res.status(401).json(ApiResponse.error("Invalid token", 401));
         return;
