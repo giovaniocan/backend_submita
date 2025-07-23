@@ -604,11 +604,11 @@ export class ArticleService {
       throw new AppError("Title cannot exceed 150 characters", 400);
     }
 
-    if (!articleData.summary || articleData.summary.trim().length < 10) {
-      throw new AppError("Summary must have at least 10 characters", 400);
+    if (!articleData.summary || articleData.summary.trim().length < 15) {
+      throw new AppError("Summary must have at least 15 characters", 400);
     }
 
-    if (articleData.summary.length > 300) {
+    if (articleData.summary.length > 1000) {
       throw new AppError("Summary cannot exceed 300 characters", 400);
     }
 
@@ -629,8 +629,8 @@ export class ArticleService {
     }
 
     // Validar keywords
-    if (articleData.keywords.length > 10) {
-      throw new AppError("Maximum 10 keywords allowed", 400);
+    if (articleData.keywords.length > 50) {
+      throw new AppError("Maximum 50 keywords allowed", 400);
     }
 
     for (const keyword of articleData.keywords) {
@@ -691,11 +691,11 @@ export class ArticleService {
 
     // Validar resumo se fornecido
     if (updateData.summary !== undefined) {
-      if (!updateData.summary || updateData.summary.trim().length < 10) {
-        throw new AppError("Summary must have at least 10 characters", 400);
+      if (!updateData.summary || updateData.summary.trim().length < 15) {
+        throw new AppError("Summary must have at least 15 characters", 400);
       }
-      if (updateData.summary.length > 300) {
-        throw new AppError("Summary cannot exceed 300 characters", 400);
+      if (updateData.summary.length > 1000) {
+        throw new AppError("Summary cannot exceed 1000 characters", 400);
       }
     }
 
@@ -709,8 +709,8 @@ export class ArticleService {
 
     // Validar keywords se fornecidas
     if (updateData.keywords !== undefined) {
-      if (updateData.keywords.length > 10) {
-        throw new AppError("Maximum 10 keywords allowed", 400);
+      if (updateData.keywords.length > 50) {
+        throw new AppError("Maximum 50 keywords allowed", 400);
       }
       for (const keyword of updateData.keywords) {
         if (!keyword || keyword.trim().length === 0) {
