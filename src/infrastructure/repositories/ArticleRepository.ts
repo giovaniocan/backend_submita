@@ -408,13 +408,11 @@ export class ArticleRepository {
       },
     });
 
-    // Número de avaliadores únicos atribuídos aos artigos do evento
-    const evaluatorsResult = await prisma.articleEvaluatorAssignment.findMany({
+    // Número de avaliadores únicos do evento
+    const evaluatorsResult = await prisma.eventEvaluator.findMany({
       where: {
-        article: {
-          eventId,
-          isActive: true,
-        },
+        eventId,
+        isActive: true,
       },
       select: {
         userId: true,
