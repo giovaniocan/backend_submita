@@ -374,4 +374,61 @@ export class ArticleRepository {
     });
     return !!article;
   }
+
+  // Obter estatísticas por evento
+  async getStatsByEventId(eventId: string): Promise<{
+    totalSubmissions: number;
+    underReview: number;
+    approved: number;
+    evaluators: number;
+  }> {
+    // Total de submissões ativas para o evento
+    const totalSubmissions = await prisma.article.count({
+      where: {
+        eventId,
+        isActive: true,
+      },
+    });
+
+    // Artigos em avaliação (IN_EVALUATION)
+    const underReview = await prisma.article.count({
+      where: {
+        eventId,
+        status: "IN_EVALUATION",
+        isActive: true,
+      },
+    });
+
+    // Artigos aprovados
+    const approved = await prisma.article.count({
+      where: {
+        eventId,
+        status: "APPROVED",
+        isActive: true,
+      },
+    });
+
+    // Número de avaliadores únicos atribuídos aos artigos do evento
+    const evaluatorsResult = await prisma.articleEvaluatorAssignment.findMany({
+      where: {
+        article: {
+          eventId,
+          isActive: true,
+        },
+      },
+      select: {
+        userId: true,
+      },
+      distinct: ['userId'],
+    });
+
+    const evaluators = evaluatorsResult.length;
+
+    return {
+      totalSubmissions,
+      underReview,
+      approved,
+      evaluators,
+    };
+  }
 }

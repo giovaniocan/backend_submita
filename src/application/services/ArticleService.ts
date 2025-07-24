@@ -552,6 +552,24 @@ export class ArticleService {
     return { articles };
   }
 
+  async getArticlesStatsByEventId(eventId: string): Promise<{
+    totalSubmissions: number;
+    underReview: number;
+    approved: number;
+    evaluators: number;
+  }> {
+    if (!this.isValidUUID(eventId)) {
+      throw new AppError("Invalid event ID format", 400);
+    }
+
+    try {
+      const stats = await this.articleRepository.getStatsByEventId(eventId);
+      return stats;
+    } catch (error) {
+      throw new AppError("Failed to get articles statistics", 500);
+    }
+  }
+
   async getArticlesForEvaluator(
     evaluatorId: string,
     filters: {

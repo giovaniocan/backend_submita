@@ -160,12 +160,19 @@ export class ArticleController {
       const articlesByEventId = await this.articleService.getArticlesByEventId(
         eventId
       );
+      
+      const articlesStats = await this.articleService.getArticlesStatsByEventId(
+        eventId
+      );
 
       res
         .status(200)
         .json(
           ApiResponse.success(
-            articlesByEventId,
+            {
+              articles: articlesByEventId.articles,
+              stats: articlesStats
+            },
             "Articles retrieved successfully"
           )
         );
