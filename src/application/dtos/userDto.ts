@@ -22,7 +22,7 @@ export interface EvaluatorResponseDto {
 
 // DTO para resposta paginada de avaliadores
 export interface PaginatedEvaluatorsDto {
-  evaluators: EvaluatorResponseDto[];
+  evaluators: EvaluatorDto[];
   total: number;
   page: number;
   limit: number;

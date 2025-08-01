@@ -14,7 +14,7 @@ export class UserRepository {
   // ========================================
   async findAllEvaluators(
     filters: ListAvailableEvaluatorsDto
-  ): Promise<{ evaluators: User[]; total: number }> {
+  ): Promise<{ evaluators: EvaluatorDto[]; total: number }> {
     const { page = 1, limit = 10, search, isActive } = filters;
 
     const skip = (page - 1) * limit;
@@ -38,15 +38,25 @@ export class UserRepository {
     }
 
     // Executar queries em paralelo
-    const [evaluators, total] = await Promise.all([
+    const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
         skip,
         take: limit,
         orderBy: { name: "asc" },
+        include: {
+          _count: {
+            select: { evaluations: true },
+          },
+        },
       }),
       prisma.user.count({ where }),
     ]);
+
+    const evaluators: EvaluatorDto[] = users.map(({ _count, ...rest }) => ({
+      ...rest,
+      evaluationsCount: _count.evaluations,
+    }));
 
     return { evaluators, total };
   }

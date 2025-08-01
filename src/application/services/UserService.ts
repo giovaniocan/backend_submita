@@ -6,6 +6,7 @@ import { AppError } from "../../shared/errors/AppError";
 import {
   ListAvailableEvaluatorsDto,
   EvaluatorResponseDto,
+  EvaluatorDto,
   PaginatedEvaluatorsDto,
   SimpleUserDto,
 } from "../dtos/userDto";
@@ -46,9 +47,7 @@ export class UserService {
 
     // 4️⃣ MONTAR RESPOSTA FINAL
     return {
-      evaluators: evaluators.map((evaluator: User) =>
-        this.toEvaluatorResponse(evaluator)
-      ),
+      evaluators,
       total,
       page,
       limit,
@@ -142,6 +141,8 @@ export class UserService {
       updatedAt: user.updatedAt,
     };
   }
+
+
   private toSimpleUser(user: User): SimpleUserDto {
     return {
       id: user.id,
