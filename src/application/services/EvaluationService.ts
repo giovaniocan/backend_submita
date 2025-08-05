@@ -577,7 +577,7 @@ export class EvaluationService {
         article: {
           id: evaluation.articleVersion.article.id,
           title: evaluation.articleVersion.article.title,
-          status: evaluation.status,
+          status: evaluation.articleVersion.article.status, // ✅ CORRIGIDO: usar status do artigo, não da evaluation
           evaluationsDone: evaluation.articleVersion.article.evaluationsDone,
           event: {
             id: evaluation.articleVersion.article.event.id,
@@ -589,27 +589,26 @@ export class EvaluationService {
       },
     };
 
-    // ✅ INCLUIR checklistResponses se existirem
-    if (evaluation.articleVersion?.questionResponses?.length > 0) {
-      // ✅ FILTRAR apenas respostas do avaliador atual
-      const userResponses = evaluation.articleVersion.questionResponses.filter(
-        (qr: any) => qr.userId === evaluation.userId
-      );
-
-      if (userResponses.length > 0) {
-        response.checklistResponses = userResponses.map((qr: any) => ({
-          id: qr.id,
-          questionId: qr.questionId,
-          booleanResponse: qr.booleanResponse ?? undefined,
-          scaleResponse: qr.scaleResponse ?? undefined,
-          textResponse: qr.textResponse ?? undefined,
+    // ✅ INCLUIR checklistResponses se existirem diretamente na evaluation
+    if (
+      evaluation.checklistResponses &&
+      evaluation.checklistResponses.length > 0
+    ) {
+      response.checklistResponses = evaluation.checklistResponses.map(
+        (response: any) => ({
+          id: response.id,
+          questionId: response.questionId,
+          booleanResponse: response.booleanResponse ?? undefined,
+          scaleResponse: response.scaleResponse ?? undefined,
+          textResponse: response.textResponse ?? undefined,
           question: {
-            description: qr.question.description,
-            type: qr.question.type,
-            order: qr.question.order,
+            id: response.question?.id,
+            description: response.question?.description || "",
+            type: response.question?.type || "TEXT",
+            order: response.question?.order || 0,
           },
-        }));
-      }
+        })
+      );
     }
 
     return response;

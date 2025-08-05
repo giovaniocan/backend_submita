@@ -332,6 +332,7 @@ export class EvaluationRepository {
   // ========================================
   // MÉTODO PRIVADO PARA CONSTRUIR INCLUDES
   // ========================================
+  // ✅ MÉTODO CORRIGIDO no EvaluationRepository
   private buildIncludeRelations(withChecklistResponses: boolean = false): any {
     const include: any = {
       user: {
@@ -365,9 +366,9 @@ export class EvaluationRepository {
       },
     };
 
-    // ✅ ADICIONAR questionResponses apenas se solicitado
+    // ✅ ADICIONAR checklistResponses diretamente na evaluation (não no articleVersion)
     if (withChecklistResponses) {
-      include.articleVersion.select.questionResponses = {
+      include.checklistResponses = {
         include: {
           question: {
             select: {
