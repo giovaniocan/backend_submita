@@ -531,9 +531,9 @@ export class EvaluationService {
         throw new AppError("Evaluation description cannot be empty", 400);
       }
 
-      if (evaluationData.evaluationDescription.length > 2000) {
+      if (evaluationData.evaluationDescription.length > 3000) {
         throw new AppError(
-          "Evaluation description cannot exceed 2000 characters",
+          "Evaluation description cannot exceed 3000 characters",
           400
         );
       }
