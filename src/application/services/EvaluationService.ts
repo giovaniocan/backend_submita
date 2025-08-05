@@ -556,64 +556,6 @@ export class EvaluationService {
     return uuidRegex.test(uuid);
   }
 
-  private toEvaluationResponse(evaluation: any): EvaluationResponseDto {
-    const response: EvaluationResponseDto = {
-      id: evaluation.id,
-      grade: evaluation.grade,
-      evaluationDescription: evaluation.evaluationDescription,
-      evaluationDate: evaluation.evaluationDate,
-      userId: evaluation.userId,
-      articleVersionId: evaluation.articleVersionId,
-      createdAt: evaluation.createdAt,
-      updatedAt: evaluation.updatedAt,
-      user: {
-        id: evaluation.user.id,
-        name: evaluation.user.name,
-        email: evaluation.user.email,
-      },
-      articleVersion: {
-        id: evaluation.articleVersion.id,
-        version: evaluation.articleVersion.version,
-        article: {
-          id: evaluation.articleVersion.article.id,
-          title: evaluation.articleVersion.article.title,
-          status: evaluation.articleVersion.article.status, // ✅ CORRIGIDO: usar status do artigo, não da evaluation
-          evaluationsDone: evaluation.articleVersion.article.evaluationsDone,
-          event: {
-            id: evaluation.articleVersion.article.event.id,
-            name: evaluation.articleVersion.article.event.name,
-            evaluationType:
-              evaluation.articleVersion.article.event.evaluationType,
-          },
-        },
-      },
-    };
-
-    // ✅ INCLUIR checklistResponses se existirem diretamente na evaluation
-    if (
-      evaluation.checklistResponses &&
-      evaluation.checklistResponses.length > 0
-    ) {
-      response.checklistResponses = evaluation.checklistResponses.map(
-        (response: any) => ({
-          id: response.id,
-          questionId: response.questionId,
-          booleanResponse: response.booleanResponse ?? undefined,
-          scaleResponse: response.scaleResponse ?? undefined,
-          textResponse: response.textResponse ?? undefined,
-          question: {
-            id: response.question?.id,
-            description: response.question?.description || "",
-            type: response.question?.type || "TEXT",
-            order: response.question?.order || 0,
-          },
-        })
-      );
-    }
-
-    return response;
-  }
-
   // ... resto dos métodos permanecem iguais ...
 
   //DELETE METHODS
@@ -977,14 +919,16 @@ export class EvaluationService {
     const { evaluations, total } =
       await this.evaluationRepository.findManyWithFilters(secureFilters);
 
-    // ✅ Se incluiu checklist, filtrar apenas respostas do avaliador
+    // ✅ CORREÇÃO: Filtrar questionResponses se solicitado
     if (filters.withChecklistResponses) {
       evaluations.forEach((evaluation: any) => {
-        if (evaluation.articleVersion?.questionResponses) {
-          evaluation.articleVersion.questionResponses =
-            evaluation.articleVersion.questionResponses.filter(
-              (response: any) => response.userId === evaluation.userId
-            );
+        // As questionResponses agora são buscadas separadamente no repository
+        // e já vêm filtradas pelo userId correto
+        if (evaluation.questionResponses) {
+          // Adicional: garantir que só vem respostas do avaliador atual
+          evaluation.questionResponses = evaluation.questionResponses.filter(
+            (response: any) => response.userId === evaluation.userId
+          );
         }
       });
     }
@@ -1014,6 +958,63 @@ export class EvaluationService {
       filters: this.buildResponseFilters(secureFilters),
       summary,
     };
+  }
+
+  // ✅ MÉTODO CORRIGIDO para mapear evaluation para response
+  private async toEvaluationResponse(
+    evaluation: any
+  ): Promise<EvaluationResponseDto> {
+    const response: EvaluationResponseDto = {
+      id: evaluation.id,
+      grade: evaluation.grade,
+      evaluationDescription: evaluation.evaluationDescription,
+      evaluationDate: evaluation.evaluationDate,
+      userId: evaluation.userId,
+      articleVersionId: evaluation.articleVersionId,
+      createdAt: evaluation.createdAt,
+      updatedAt: evaluation.updatedAt,
+      user: {
+        id: evaluation.user.id,
+        name: evaluation.user.name,
+        email: evaluation.user.email,
+      },
+      articleVersion: {
+        id: evaluation.articleVersion.id,
+        version: evaluation.articleVersion.version,
+        article: {
+          id: evaluation.articleVersion.article.id,
+          title: evaluation.articleVersion.article.title,
+          status: evaluation.articleVersion.article.status,
+          evaluationsDone: evaluation.articleVersion.article.evaluationsDone,
+          event: {
+            id: evaluation.articleVersion.article.event.id,
+            name: evaluation.articleVersion.article.event.name,
+            evaluationType:
+              evaluation.articleVersion.article.event.evaluationType,
+          },
+        },
+      },
+    };
+
+    // ✅ ADICIONAR questionResponses se disponível
+    if (evaluation.questionResponses) {
+      response.checklistResponses = evaluation.questionResponses.map(
+        (qr: any) => ({
+          id: qr.id,
+          questionId: qr.questionId,
+          booleanResponse: qr.booleanResponse,
+          scaleResponse: qr.scaleResponse,
+          textResponse: qr.textResponse,
+          question: {
+            description: qr.question.description,
+            type: qr.question.type,
+            order: qr.question.order,
+          },
+        })
+      );
+    }
+
+    return response;
   }
 
   private validateInputsForGet(
