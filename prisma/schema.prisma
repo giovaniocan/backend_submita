@@ -59,7 +59,7 @@ model Event {
 model Article {
   id                   String                       @id @default(uuid()) @db.Uuid
   title                String                       @db.VarChar(150)
-  summary              String                       @db.VarChar(300)
+  summary              String                       @db.VarChar(2000)
   thematicArea         String?                      @map("thematic_area") @db.VarChar(150)
   currentVersion       Int                          @default(1) @map("current_version")
   evaluationsDone      Int                          @default(0) @map("evaluations_done")

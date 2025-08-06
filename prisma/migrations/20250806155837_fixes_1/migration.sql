@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "articles" ALTER COLUMN "summary" SET DATA TYPE VARCHAR(2000);
