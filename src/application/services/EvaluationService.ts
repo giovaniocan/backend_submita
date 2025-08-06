@@ -149,7 +149,7 @@ export class EvaluationService {
       let finalGrade: number | undefined;
       let finalStatus:
         | "APPROVED"
-        | "IN_CORRECTION"
+        | "TO_CORRECTION"
         | "REJECTED"
         | "IN_EVALUATION";
       finalStatus = "IN_EVALUATION";
@@ -366,7 +366,7 @@ export class EvaluationService {
     articleId: string
   ): Promise<{
     finalGrade: number;
-    finalStatus: "APPROVED" | "IN_CORRECTION" | "REJECTED";
+    finalStatus: "APPROVED" | "TO_CORRECTION" | "REJECTED";
   }> {
     // 1️⃣ BUSCAR TODAS AS AVALIAÇÕES DO ARTIGO
     const evaluations =
@@ -396,7 +396,7 @@ export class EvaluationService {
   }
 
   private sendEmailByStatus(
-    finalStatus: "APPROVED" | "IN_CORRECTION" | "REJECTED"
+    finalStatus: "APPROVED" | "TO_CORRECTION" | "REJECTED"
   ) {
     //aqui vamos fazer uma logica, se foi aprovado, enviar um email de aprovação
     // se foi reprovado, enviar um email de reprovação
@@ -421,7 +421,7 @@ export class EvaluationService {
 
   private calculateFinalStatus(
     evaluations: Evaluation[]
-  ): "APPROVED" | "IN_CORRECTION" | "REJECTED" {
+  ): "APPROVED" | "TO_CORRECTION" | "REJECTED" {
     const quantityOfEvaluations = evaluations.length;
 
     if (quantityOfEvaluations === 0) {
@@ -448,7 +448,7 @@ export class EvaluationService {
       if (evaluation.status === "APPROVED") {
         return "APPROVED";
       } else if (evaluation.status === "TO_CORRECTION") {
-        return "IN_CORRECTION";
+        return "TO_CORRECTION";
       } else {
         return "REJECTED";
       }
@@ -468,7 +468,7 @@ export class EvaluationService {
       }
       // Qualquer outro caso (pelo menos 1 quer correção, ou 1 aprovou + 1 rejeitou)
       else {
-        return "IN_CORRECTION";
+        return "TO_CORRECTION";
       }
     }
 
@@ -492,7 +492,7 @@ export class EvaluationService {
       else {
         // Se tem mais "TO_CORRECTION" que "REJECTED" -> correção
         if (toCorrectionCount >= rejectedCount) {
-          return "IN_CORRECTION";
+          return "TO_CORRECTION";
         }
         // Se tem mais "REJECTED" que "TO_CORRECTION" -> rejeição
         else {
@@ -691,7 +691,7 @@ export class EvaluationService {
       );
     }
 
-    const finalizedStatuses = ["APPROVED", "REJECTED", "IN_CORRECTION"];
+    const finalizedStatuses = ["APPROVED", "REJECTED", "TO_CORRECTION"];
     const isFinalized = finalizedStatuses.includes(article.status);
 
     if (isFinalized) {
@@ -730,7 +730,7 @@ export class EvaluationService {
   }
 
   private captureCurrentState(article: any) {
-    const finalizedStatuses = ["APPROVED", "REJECTED", "IN_CORRECTION"];
+    const finalizedStatuses = ["APPROVED", "REJECTED", "TO_CORRECTION"];
 
     return {
       articleStatus: article.status,
@@ -742,14 +742,14 @@ export class EvaluationService {
   private calculateNewArticleStatus(
     article: any,
     newEvaluationsDone: number
-  ): "APPROVED" | "IN_CORRECTION" | "REJECTED" | "SUBMITTED" | "IN_EVALUATION" {
+  ): "APPROVED" | "TO_CORRECTION" | "REJECTED" | "SUBMITTED" | "IN_EVALUATION" {
     // Regra 1: Sem avaliações = SUBMITTED
     if (newEvaluationsDone === 0) {
       return "SUBMITTED";
     }
 
     // Regra 2: Artigo finalizado + deleção = volta para IN_EVALUATION
-    const finalizedStatuses = ["APPROVED", "REJECTED", "IN_CORRECTION"];
+    const finalizedStatuses = ["APPROVED", "REJECTED", "TO_CORRECTION"];
     if (finalizedStatuses.includes(article.status)) {
       return "IN_EVALUATION";
     }
@@ -1316,7 +1316,7 @@ export class EvaluationService {
     const finalizedStatuses: Article["status"][] = [
       "APPROVED",
       "REJECTED",
-      "IN_CORRECTION",
+      "TO_CORRECTION",
     ];
 
     // Se artigo não está finalizado, pode mudar

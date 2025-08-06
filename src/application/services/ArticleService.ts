@@ -679,8 +679,8 @@ export class ArticleService {
   }
 
   private canEditArticle(status: string): boolean {
-    // Artigo só pode ser editado se estiver SUBMITTED ou IN_CORRECTION
-    return status === "SUBMITTED" || status === "IN_CORRECTION";
+    // Artigo só pode ser editado se estiver SUBMITTED ou TO_CORRECTION
+    return status === "SUBMITTED" || status === "TO_CORRECTION";
   }
 
   private getMaxEvaluatorsByType(evaluationType: string): number {

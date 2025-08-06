@@ -110,9 +110,12 @@ export class ArticleVersionService {
       );
     }
 
-    if (article.status !== "IN_CORRECTION" && article.status !== "APPROVED_WITH_REMARKS") {
+    if (
+      article.status !== "TO_CORRECTION" &&
+      article.status !== "APPROVED_WITH_REMARKS"
+    ) {
       throw new AppError(
-        "New version can only be created when article status is IN_CORRECTION or APPROVED_WITH_REMARKS",
+        "New version can only be created when article status is TO_CORRECTION or APPROVED_WITH_REMARKS",
         400
       );
     }
